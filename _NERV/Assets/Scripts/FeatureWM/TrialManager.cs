@@ -52,6 +52,22 @@ public class TrialManager : MonoBehaviour
     public bool ShowScoreUI = true;
     public bool ShowFeedbackUI = true;
 
+    //Now for event code dictionary
+    private Dictionary<string, int> TTLEventCodes = new Dictionary<string, int>
+    {
+        { "TrialOn",       1 },
+        { "SampleOn",      2 },
+        { "SampleOff",     3 },
+        { "DistractorOn",  4 },
+        { "TargetOn",      5 },
+        { "DistractorOff", 6 },
+        { "Choice",        7 },
+        { "StartEndBlock", 8 }, // Sends 255 in TTL
+        // max 8 events — don’t exceed!
+    };
+
+
+
 
     void Start()
     {
@@ -90,7 +106,7 @@ public class TrialManager : MonoBehaviour
 
 
 
-        SerialTTLManager.Instance.LogEvent("StartEndBlock");
+        LogTTL("StartEndBlock");
         StartCoroutine(RunTrials());
     }
 
@@ -103,17 +119,14 @@ public class TrialManager : MonoBehaviour
             var trial = _trials[_currentIndex];
 
             // — TRIAL ON —
-            LogManager.Instance.LogEvent("TrialOn", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("TrialOn");
+            LogTTL("TrialOn");
 
             // — IDLE —
-            LogManager.Instance.LogEvent("Idle", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("Idle");
+            LogTTL("Idle");
             yield return new WaitForSeconds(IdleDuration);
 
             // — SAMPLE ON —
-            LogManager.Instance.LogEvent("SampleOn", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("SampleOn");
+            LogTTL("SampleOn");
             var sampleGO = Spawner.SpawnStimuli(
                 new int[] { trial.SearchStimIndices[0] },
                 new Vector3[] { trial.SampleStimLocation }
@@ -121,20 +134,18 @@ public class TrialManager : MonoBehaviour
             yield return new WaitForSeconds(trial.DisplaySampleDuration);
 
             Spawner.ClearAll();
+
             // mark sample off
-            LogManager.Instance.LogEvent("SampleOff", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("SampleOff");
+            LogTTL("SampleOff");
 
             // — POST-SAMPLE DELAY —
-            LogManager.Instance.LogEvent("PostSampleDelay", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("PostSampleDelay");
+            LogTTL("PostSampleDelay");
             yield return new WaitForSeconds(trial.PostSampleDelayDuration);
 
             // — DISTRACTORS —
             if (trial.PostSampleDistractorStimIndices.Length > 0)
             {
-                LogManager.Instance.LogEvent("DistractorOn", trial.TrialID);
-                SerialTTLManager.Instance.LogEvent("DistractorOn");
+                LogTTL("DistractorOn");
                 Spawner.SpawnStimuli(
                     trial.PostSampleDistractorStimIndices,
                     trial.PostSampleDistractorStimLocations
@@ -142,18 +153,15 @@ public class TrialManager : MonoBehaviour
                 yield return new WaitForSeconds(trial.DisplayPostSampleDistractorsDuration);
 
                 Spawner.ClearAll();
-                LogManager.Instance.LogEvent("DistractorOff", trial.TrialID);
-                SerialTTLManager.Instance.LogEvent("DistractorOff");
+                LogTTL("DistractorOff");
             }
 
             // — PRE-TARGET DELAY —
-            LogManager.Instance.LogEvent("PreTargetDelay", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("PreTargetDelay");
+            LogTTL("PreTargetDelay");
             yield return new WaitForSeconds(trial.PreTargetDelayDuration);
 
             // — SEARCH PHASE (TargetOn) —
-            LogManager.Instance.LogEvent("TargetOn", trial.TrialID);
-            SerialTTLManager.Instance.LogEvent("TargetOn");
+            LogTTL("TargetOn");
             List<GameObject> spawnedItems = Spawner.SpawnStimuli(
                 trial.SearchStimIndices,
                 trial.SearchStimLocations
@@ -182,19 +190,18 @@ public class TrialManager : MonoBehaviour
 
             if (correct)
             {
-                SerialTTLManager.Instance.LogEvent("Choice");
-                LogManager.Instance.LogEvent("Choice", trial.TrialID);
+                LogTTL("Choice");
                 _score += PointsPerCorrect;
 
                 // only play correct beep if not full -- else play coinBarFull beep
                 if (!CoinController.Instance.CoinBarWasJustFilled)
                     _audioSrc.PlayOneShot(_correctBeep);
 
-                SerialTTLManager.Instance.LogEvent("AudioPlaying");
+                LogTTL("AudioPlaying");
 
 
                 // log success
-                SerialTTLManager.Instance.LogEvent("Success");
+                LogTTL("Success");
                 FeedbackText.text = $"+{PointsPerCorrect}";
 
 
@@ -206,18 +213,16 @@ public class TrialManager : MonoBehaviour
                 UpdateScoreUI();
 
                 _audioSrc.PlayOneShot(_errorBeep);
-                SerialTTLManager.Instance.LogEvent("AudioPlaying");
+                LogTTL("AudioPlaying");
                 if (answered)
                 {
-                    SerialTTLManager.Instance.LogEvent("Choice");
-                    LogManager.Instance.LogEvent("Choice", trial.TrialID);
-                    SerialTTLManager.Instance.LogEvent("Fail");
+                    LogTTL("Choice");
+                    LogTTL("Fail");
                 }
                 else
                 {
-                    LogManager.Instance.LogEvent("Timeout", trial.TrialID);
-                    SerialTTLManager.Instance.LogEvent("Timeout");
-                    SerialTTLManager.Instance.LogEvent("Fail");
+                    LogTTL("Timeout");
+                    LogTTL("Fail");
                 }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
 
@@ -270,8 +275,7 @@ public class TrialManager : MonoBehaviour
         }
 
         // — BLOCK END —
-        LogManager.Instance.LogEvent("StartEndBlock", "AllTrialsDone");
-        SerialTTLManager.Instance.LogEvent("StartEndBlock");
+        LogTTL("StartEndBlock");
     }
 
 
@@ -325,7 +329,7 @@ public class TrialManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.S))
         {
-            ShowScoreUI    = !ShowScoreUI;
+            ShowScoreUI = !ShowScoreUI;
             ShowFeedbackUI = !ShowFeedbackUI;
 
             if (ScoreText != null)
@@ -336,5 +340,22 @@ public class TrialManager : MonoBehaviour
         }
     }
 
+    private void LogTTL(string label)
+    {
+        // Always log to string-based LogManager
+        LogManager.Instance.LogEvent(label, _trials[_currentIndex].TrialID);
+
+        // Lookup TTL code (if exists)
+        if (TTLEventCodes.TryGetValue(label, out int code))
+        {
+            SerialTTLManager.Instance.LogEvent(label, code);
+        }
+        else
+        {
+            // fallback if label not in dictionary (log-only)
+            SerialTTLManager.Instance.LogEvent(label);
+        }
+
+    }
 
 }

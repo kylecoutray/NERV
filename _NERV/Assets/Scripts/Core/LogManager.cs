@@ -18,7 +18,9 @@ public class LogManager : MonoBehaviour
 
             // Prepare log file with safe timestamp (no colons or dots)
             string fileTs = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string logsDir = Path.Combine(Application.dataPath, "Logs");
+
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..")); 
+            string logsDir = Path.Combine(projectRoot, "ALL_Logs");
             Directory.CreateDirectory(logsDir);
             string path = Path.Combine(logsDir, $"Session_{fileTs}.csv");
 
@@ -44,7 +46,7 @@ public class LogManager : MonoBehaviour
         _writer.Flush();
 
         // Mirror to console
-        Debug.Log($"{time},{trialID},{eventType},{details}");
+        Debug.Log($"{time},{trialID},{eventType},{details} [LOG]");
     }
 
     void OnApplicationQuit()

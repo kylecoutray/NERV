@@ -86,7 +86,6 @@ public class CoinController : MonoBehaviour
             // 2) Directly place the coin at the click screen pixel
             rt.position = new Vector3(screenPos.x, screenPos.y + 10, 0f);
 
-            Debug.Log($"[CoinController] placing coin at world/screen pos = {rt.position}");
 
             // 3) Compute the target slot’s world position (UI slot)
             var slotRT = _slots[_coinsAccumulated].rectTransform;

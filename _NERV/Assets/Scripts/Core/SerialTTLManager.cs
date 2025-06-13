@@ -13,26 +13,6 @@ public class SerialTTLManager : MonoBehaviour
     private SerialPort serialPort;
     public static SerialTTLManager Instance { get; private set; }
 
-    // Only these events will actually send a byte over serial
-    private static readonly HashSet<string> ttlEnabledEvents = new HashSet<string>
-    {
-        "TrialOn","SampleOn","SampleOff",
-        "DistractorOn","TargetOn","Choice","StartEndBlock"
-    };
-
-    // Map labels → 1-indexed TTL codes
-    private static readonly Dictionary<string,int> eventCodes = new Dictionary<string,int>
-    {
-        { "TrialOn",       1 },
-        { "SampleOn",      2 },
-        { "SampleOff",     3 },
-        { "DistractorOn",  4 },
-        { "TargetOn",      5 },
-        { "DistractorOff", 6 },
-        { "Choice",        7 },
-        { "StartEndBlock", 8 }
-    };
-
     private string logFilePath;
 
     void Awake()
@@ -43,7 +23,8 @@ public class SerialTTLManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         // Prepare CSV
-        string logsDir = Path.Combine(Application.dataPath, "Logs");
+        string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..")); 
+        string logsDir = Path.Combine(projectRoot, "TTL_Logs");
         Directory.CreateDirectory(logsDir);
         logFilePath = Path.Combine(logsDir,
             $"TTL_log_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
@@ -70,30 +51,33 @@ public class SerialTTLManager : MonoBehaviour
     /// </summary>
     public void LogEvent(string label)
     {
-        // Legacy timestamp format
-        string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        string status, byteSent = "";
+        LogEvent(label, -1); // -1 signals: no byte to send
+    }
 
-        // Decide whether to send and what to record
-        if (ttlEnabledEvents.Contains(label))
+    public void LogEvent(string label, int ttlCode)
+    {
+        string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+        string status;
+        string byteSent = "No Byte Sent";
+
+        if (ttlCode >= 1 && ttlCode <= 8)
         {
+            byte val = (label == "StartEndBlock") ? (byte)255 : (byte)(1 << (ttlCode - 1));
             if (testMode)
             {
                 status = "TEST_ONLY";
             }
             else if (serialPort != null && serialPort.IsOpen)
             {
-                int code = eventCodes[label];
-                byte val = (label=="StartEndBlock")? (byte)255 : (byte)(1 << (code-1));
                 try
                 {
-                    serialPort.Write(new byte[]{ val }, 0, 1);
-                    status   = "SENT";
+                    serialPort.Write(new byte[] { val }, 0, 1);
+                    status = "SENT";
                     byteSent = val.ToString();
                 }
                 catch
                 {
-                    status   = "FAILED";
+                    status = "FAILED";
                 }
             }
             else
@@ -106,18 +90,11 @@ public class SerialTTLManager : MonoBehaviour
             status = "LOG_ONLY";
         }
 
-        // Build the CSV line: Timestamp,Status,Event,ByteSent
-        if (string.IsNullOrEmpty(byteSent))
-            byteSent = "No Byte Sent";
         string line = $"{timestamp},{status},{label},{byteSent}";
 
-        // Mirror to console exactly
-        if (status=="FAILED")
-            Debug.LogWarning(line);
-        else
-            Debug.Log(line);
+        if (status == "FAILED") Debug.LogWarning(line);
+        else Debug.Log($"{line} [SerialTTL]");
 
-        // And append to CSV
         try
         {
             File.AppendAllText(logFilePath, line + Environment.NewLine);
@@ -127,6 +104,7 @@ public class SerialTTLManager : MonoBehaviour
             Debug.LogError($"[SerialTTL] Could not write log: {e}");
         }
     }
+
 
     void OnApplicationQuit()
     {

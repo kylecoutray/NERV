@@ -67,7 +67,7 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _PulseStartTime: 25.100508
+    - _PulseStartTime: 6.908287
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -75,7 +75,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _Cursor: {r: 0.81927085, g: 0.60925925, b: 0, a: 0}
+    - _Cursor: {r: 0.4421875, g: 0.32777777, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PulseCenter: {r: 0.5833333, g: 0.33333334, b: 0, a: 0}
+    - _PulseCenter: {r: 0.79583335, g: 0.8009259, b: 0, a: 0}
   m_BuildTextureStacks: []

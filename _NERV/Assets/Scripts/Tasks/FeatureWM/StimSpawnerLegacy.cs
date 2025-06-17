@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class StimulusSpawner : MonoBehaviour
+public class StimSpawnerLegacy : MonoBehaviour
 {
     public float BaseStimulusScale = 1f;
     private Camera _mainCamera;

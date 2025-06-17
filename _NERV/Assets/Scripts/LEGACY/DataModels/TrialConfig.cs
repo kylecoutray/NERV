@@ -14,7 +14,12 @@ public class TrialConfig
     public float PreTargetDelayDuration;
     public Vector3 SampleStimLocation;
     public int[] SearchStimIndices;
+    public int[] SampleOnStimIndices;
+    public int[] TargetOnStimIndices;
+    public Vector3[] SampleOnStimLocations;
+    public Vector3[] TargetOnStimLocations;
     public Vector3[] SearchStimLocations;
+    
     public int[] SearchStimTokenReward;
     public int[] PostSampleDistractorStimIndices;
     public Vector3[] PostSampleDistractorStimLocations;

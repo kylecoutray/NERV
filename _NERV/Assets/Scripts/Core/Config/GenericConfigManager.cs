@@ -1,0 +1,226 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using UnityEngine;
+
+/// <summary>
+/// Parses two CSVs:
+///  - TrialDefFile: rows of TrialID,BlockCount,<StateName>StimIndices,<StateName>StimLocations,<StateName>Duration,...
+///  - StimIndexFile: rows of Index,PrefabName
+/// Exposes both in-memory for TrialManager<TTK> and StimulusSpawner.
+/// </summary>
+public class GenericConfigManager : MonoBehaviour
+{
+    public static GenericConfigManager Instance { get; private set; }
+
+    [Header("CSV: trial definitions")]
+    public TextAsset TrialDefFile;
+
+    [Header("CSV: stimulus index→ prefab name")]
+    public TextAsset StimIndexFile;
+
+    [HideInInspector]
+    public List<TrialData> Trials = new List<TrialData>();
+
+    [HideInInspector]
+    public Dictionary<int,string> StimIndexToFile = new Dictionary<int,string>();
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            if (StimIndexFile == null || TrialDefFile == null)
+            {
+                Debug.LogError("GenericConfigManager: assign both CSVs!");
+                return;
+            }
+            LoadStimIndex();
+            LoadTrialDefs();
+        }
+        else Destroy(gameObject);
+    }
+
+    void LoadStimIndex()
+    {
+        var lines = StimIndexFile.text.Split(
+            new[] { "\r\n", "\n" },
+            StringSplitOptions.RemoveEmptyEntries
+        );
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var parts = lines[i].Split(',');
+            if (parts.Length >= 2 &&
+                int.TryParse(parts[0].Trim(), out var idx))
+            {
+                StimIndexToFile[idx] = parts[1].Trim().Trim('"');
+            }
+        }
+        Debug.Log($"[GenericCFG] Loaded {StimIndexToFile.Count} stimulus mappings");
+    }
+
+    void LoadTrialDefs()
+    {
+        var lines   = TrialDefFile.text.Split(
+            new[] { "\r\n", "\n" },
+            StringSplitOptions.RemoveEmptyEntries
+        );
+        if (lines.Length < 2)
+        {
+            Debug.LogError("GenericConfigManager: not enough rows in TrialDefFile");
+            return;
+        }
+
+        var headers = SplitCsvLine(lines[0]);
+        var colMap  = new Dictionary<string,int>();
+        for (int i = 0; i < headers.Length; i++)
+            colMap[headers[i].Trim()] = i;
+
+        if (!colMap.ContainsKey("TrialID") || !colMap.ContainsKey("BlockCount"))
+        {
+            Debug.LogError("GenericConfigManager: CSV missing TrialID or BlockCount");
+            return;
+        }
+
+        for (int r = 1; r < lines.Length; r++)
+        {
+            var cols = SplitCsvLine(lines[r]);
+            var t    = new TrialData
+            {
+                TrialID    = cols[colMap["TrialID"]].Trim(),
+                BlockCount = int.Parse(cols[colMap["BlockCount"]].Trim())
+            };
+
+            // dynamically read any <StateName>StimIndices, StimLocations, Duration
+            foreach (var kv in colMap)
+            {
+                string hdr = kv.Key;
+                int    c   = kv.Value;
+                string cell= cols[c].Trim();
+
+                if (hdr.EndsWith("StimIndices", StringComparison.Ordinal))
+                {
+                    string state = hdr.Substring(0, hdr.Length - "StimIndices".Length);
+                    t.StimIndices[state] = ParseIntArray(cell);
+                }
+                else if (hdr.EndsWith("StimLocations", StringComparison.Ordinal))
+                {
+                    string state = hdr.Substring(0, hdr.Length - "StimLocations".Length);
+                    t.StimLocations[state] = ParseVector3Array(cell);
+                }
+                else if (hdr.EndsWith("Duration", StringComparison.Ordinal))
+                {
+                    string state = hdr.Substring(0, hdr.Length - "Duration".Length);
+                    t.Durations[state] = float.Parse(cell);
+                }
+            }
+
+            Trials.Add(t);
+        }
+
+        Debug.Log($"[GenericCFG] Loaded {Trials.Count} trials");
+    }
+
+    //--- CSV helpers ---
+    private string[] SplitCsvLine(string line)
+    {
+        var fields = new List<string>();
+        var cur    = new StringBuilder();
+        bool inQ   = false;
+        foreach (char ch in line)
+        {
+            if (ch == '"') inQ = !inQ;
+            else if (ch == ',' && !inQ)
+            {
+                fields.Add(cur.ToString());
+                cur.Clear();
+            }
+            else cur.Append(ch);
+        }
+        fields.Add(cur.ToString());
+        return fields.ToArray();
+    }
+
+    private int[] ParseIntArray(string s)
+    {
+        s = s.Trim().TrimStart('[').TrimEnd(']');
+        if (string.IsNullOrEmpty(s)) return Array.Empty<int>();
+        var parts = s.Split(',');
+        var arr   = new int[parts.Length];
+        for (int i = 0; i < parts.Length; i++)
+            arr[i] = int.Parse(parts[i].Trim());
+        return arr;
+    }
+
+    private Vector3[] ParseVector3Array(string s)
+    {
+        s = s.Trim();
+        // Single vector "[x,y,z]"?
+        if (s.StartsWith("[") && s.EndsWith("]") && !s.Contains("],[") && !s.Contains("[["))
+        {
+            // remove outer [ ]
+            string inner = s.Substring(1, s.Length - 2);
+            var p = inner.Split(',');
+            return new[] {
+                new Vector3(
+                    float.Parse(p[0].Trim()),
+                    float.Parse(p[1].Trim()),
+                    float.Parse(p[2].Trim())
+                )
+            };
+        }
+
+        // Single vector "[[x,y,z]]"?
+        if (s.StartsWith("[[") && s.EndsWith("]]") && !s.Contains("],["))
+        {
+            // remove outer [[ ]]
+            string inner = s.Substring(2, s.Length - 4);
+            var p = inner.Split(',');
+            return new[] {
+                new Vector3(
+                    float.Parse(p[0].Trim()),
+                    float.Parse(p[1].Trim()),
+                    float.Parse(p[2].Trim())
+                )
+            };
+        }
+
+        // Multi-vector "[[x,y,z],[x2,y2,z2],...]"?
+        if (s.StartsWith("[") && s.EndsWith("]"))
+            s = s.Substring(1, s.Length - 2);
+
+        if (string.IsNullOrEmpty(s))
+            return Array.Empty<Vector3>();
+
+        var elems = new List<string>();
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.Length; i++)
+        {
+            if (s[i] == '[')
+            {
+                if (depth++ == 0) start = i;
+            }
+            else if (s[i] == ']')
+            {
+                if (--depth == 0)
+                    elems.Add(s.Substring(start, i - start + 1));
+            }
+        }
+
+        var outArr = new Vector3[elems.Count];
+        for (int i = 0; i < elems.Count; i++)
+        {
+            var sub = elems[i].Trim('[', ']');
+            var p   = sub.Split(',');
+            outArr[i] = new Vector3(
+                float.Parse(p[0].Trim()),
+                float.Parse(p[1].Trim()),
+                float.Parse(p[2].Trim())
+            );
+        }
+        return outArr;
+    }
+
+}

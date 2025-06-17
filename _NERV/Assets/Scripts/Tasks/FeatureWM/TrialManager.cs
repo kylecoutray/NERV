@@ -19,7 +19,7 @@ public enum TrialState
 public class TrialManager : MonoBehaviour
 {
     [Header("References")]
-    public StimulusSpawner Spawner;
+    public StimSpawnerLegacy Spawner;
     public Camera PlayerCamera;   // assign your main camera
     public TMP_Text FeedbackText;
     public TMP_Text ScoreText;

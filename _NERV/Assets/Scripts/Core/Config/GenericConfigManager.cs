@@ -2,22 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using System.Linq;
 
 /// <summary>
 /// Parses two CSVs:
 ///  - TrialDefFile: rows of TrialID,BlockCount,<StateName>StimIndices,<StateName>StimLocations,<StateName>Duration,...
-///  - StimIndexFile: rows of Index,PrefabName
+///  - StimIndexFile (asset.text): rows of Index,PrefabName
 /// Exposes both in-memory for TrialManager<TTK> and StimulusSpawner.
 /// </summary>
 public class GenericConfigManager : MonoBehaviour
 {
     public static GenericConfigManager Instance { get; private set; }
 
-    [Header("CSV: trial definitions")]
-    public TextAsset TrialDefFile;
-
-    [Header("CSV: stimulus index→ prefab name")]
-    public TextAsset StimIndexFile;
+    [Header("Auto-load CSVs from Resources")]
+    [Tooltip("Leave blank to use current scene name")]
+    public string Acronym;
 
     [HideInInspector]
     public List<TrialData> Trials = new List<TrialData>();
@@ -27,25 +27,47 @@ public class GenericConfigManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
 
-            if (StimIndexFile == null || TrialDefFile == null)
+        // Find acronym from TrialManager{acr} 
+        if (string.IsNullOrEmpty(Acronym))
+        {
+            var trialManagerGO = GameObject.FindObjectsOfType<MonoBehaviour>()
+                .FirstOrDefault(m => m.GetType().Name.StartsWith("TrialManager"));
+
+            if (trialManagerGO != null)
             {
-                Debug.LogError("GenericConfigManager: assign both CSVs!");
-                return;
+                string typeName = trialManagerGO.GetType().Name;  // e.g., "TrialManagerWMR"
+                if (typeName.Length > "TrialManager".Length)
+                {
+                    Acronym = typeName.Substring("TrialManager".Length);
+                }
             }
-            LoadStimIndex();
-            LoadTrialDefs();
+
+            if (string.IsNullOrEmpty(Acronym))
+                Debug.LogWarning("[GenericConfigManager] Acronym not detected from TrialManager name.");
         }
-        else Destroy(gameObject);
+
+        // 2) Load the two CSVs from Resources/Configs/{Acronym}/
+        var defText  = Resources.Load<TextAsset>($"Configs/{Acronym}/{Acronym}_Trial_Def");
+        var stimText = Resources.Load<TextAsset>($"Configs/{Acronym}/{Acronym}_Stim_Index");
+        if (defText == null || stimText == null)
+        {
+            Debug.LogError($"[GenericCFG] Missing CSVs for “{Acronym}” in Resources/Configs/{Acronym}");
+            return;
+        }
+
+        // 3) Parse them
+        LoadStimIndex(stimText);
+        LoadTrialDefs(defText);
+
     }
 
-    void LoadStimIndex()
+    void LoadStimIndex(TextAsset asset)
     {
-        var lines = StimIndexFile.text.Split(
+        var lines = asset.text.Split(
             new[] { "\r\n", "\n" },
             StringSplitOptions.RemoveEmptyEntries
         );
@@ -61,9 +83,9 @@ public class GenericConfigManager : MonoBehaviour
         Debug.Log($"[GenericCFG] Loaded {StimIndexToFile.Count} stimulus mappings");
     }
 
-    void LoadTrialDefs()
+    void LoadTrialDefs(TextAsset asset)
     {
-        var lines   = TrialDefFile.text.Split(
+        var lines   = asset.text.Split(
             new[] { "\r\n", "\n" },
             StringSplitOptions.RemoveEmptyEntries
         );

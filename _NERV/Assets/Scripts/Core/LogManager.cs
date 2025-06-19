@@ -14,7 +14,7 @@ public class LogManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            
 
             // Prepare log file with safe timestamp (no colons or dots)
             string fileTs = DateTime.Now.ToString("yyyyMMdd_HHmmss");

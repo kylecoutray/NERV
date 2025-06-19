@@ -20,7 +20,7 @@ public class SerialTTLManager : MonoBehaviour
         // Singleton
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+        
 
         // Prepare CSV
         string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..")); 

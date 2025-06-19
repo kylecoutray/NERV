@@ -12,7 +12,8 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
     private string trialIDPrefix = "WMTEST";
     private int totalTrials = 24;
     private int blocks = 1;
-    private string outputFolder = "Assets/Configs";
+    private string outputFolder = "Assets/Resources/Configs";
+    private string acr = "ACR";
 
     private Dictionary<string, StateConfig> stateConfigs = new Dictionary<string, StateConfig>();
     private Vector2 scrollPos;
@@ -31,6 +32,8 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         EditorGUI.BeginChangeCheck();
         experimentDef = (ExperimentDefinition)EditorGUILayout.ObjectField(
             "Experiment Definition", experimentDef, typeof(ExperimentDefinition), false);
+        
+        acr = EditorGUILayout.TextField("Acronym (Like XYZ):", acr);
 
         stimIndexCSV = (TextAsset)EditorGUILayout.ObjectField(
             "StimIndex CSV", stimIndexCSV, typeof(TextAsset), false);
@@ -46,6 +49,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         EditorGUILayout.HelpBox(
             "Total Trials must equal number of stimuli * Cue Repetitions",
             MessageType.Info);
+        outputFolder = $"Assets/Resources/Configs/{acr}";
         outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
         EditorGUILayout.Space();
 
@@ -270,6 +274,20 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
                 }
 
                 list.Insert(0, cueIdx);
+                
+                // truncate list back down to expected length
+                
+                var cfg = stateConfigs[lastName];
+                // decide your “targetCount”—if using randomStim:
+                int targetCount = cfg.randomStim
+                    ? cfg.expectedStimCount
+                    : cfg.customIndices.Count;
+                // if you happen to mark the last state as the cue itself, fall back to cueRepetitions
+                if (cfg.isCue)
+                    targetCount = cfg.cueRepetitions;
+
+                while (list.Count > targetCount)
+                    list.RemoveAt(list.Count - 1);
             }
         }
 
@@ -304,15 +322,17 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             outLines.Add(string.Join(",", row));
         }
 
+
+        string destFolder = outputFolder;
+
         // Write CSV file
-        if (!Directory.Exists(outputFolder))
+        if (!Directory.Exists(destFolder))
         {
-            Directory.CreateDirectory(outputFolder);
+            Directory.CreateDirectory(destFolder);
         }
 
-        string path = Path.Combine(
-            outputFolder,
-            trialIDPrefix + "_Trial_Def.csv");
+
+        string path = Path.Combine(destFolder, $"{acr}_Trial_Def.csv");
 
         File.WriteAllLines(path, outLines);
         AssetDatabase.Refresh();

@@ -6,8 +6,9 @@ using System.Linq;
 
 public class StimIndexMappingWindow : EditorWindow
 {
+    private string acr = "XYZ";
     private string inputFolder = "Assets/Resources/Stimuli";
-    private string outputFolder = "Assets/Configs";
+    private string outputFolder = "Assets/Resources/Configs";
     private string outputFilename = "Stim_Index.csv";
 
     [MenuItem("Tools/Stim Index Mapping")]
@@ -15,6 +16,7 @@ public class StimIndexMappingWindow : EditorWindow
 
     void OnGUI()
     {
+        acr = EditorGUILayout.TextField("Acronym (Like XYZ):", acr);
         GUILayout.Label("Generate Stim‑Index CSV", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 
@@ -33,15 +35,12 @@ public class StimIndexMappingWindow : EditorWindow
         // Output folder field
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.PrefixLabel("Output Config Folder");
+        outputFolder = $"Assets/Resources/Configs/{acr}";
         outputFolder = EditorGUILayout.TextField(outputFolder);
-        if (GUILayout.Button("Browse", GUILayout.Width(60)))
-        {
-            string sel = EditorUtility.OpenFolderPanel("Select Output Folder", outputFolder, "");
-            if (!string.IsNullOrEmpty(sel) && sel.StartsWith(Application.dataPath))
-                outputFolder = "Assets" + sel.Substring(Application.dataPath.Length);
-        }
+        
         EditorGUILayout.EndHorizontal();
 
+        outputFilename = $"{acr}_Stim_Index.csv";
         outputFilename = EditorGUILayout.TextField("Output Filename", outputFilename);
         EditorGUILayout.Space();
 
@@ -56,15 +55,18 @@ public class StimIndexMappingWindow : EditorWindow
             EditorUtility.DisplayDialog("Error", $"Input folder not found: {inputFolder}", "OK");
             return;
         }
+
         if (!Directory.Exists(outputFolder))
             Directory.CreateDirectory(outputFolder);
+
+        
 
         var fbxFiles = Directory.GetFiles(inputFolder, "*.fbx", SearchOption.TopDirectoryOnly)
                                 .Select(Path.GetFileNameWithoutExtension)
                                 .OrderBy(n => n)
                                 .ToArray();
 
-        string path = Path.Combine(outputFolder, outputFilename);
+        string path = Path.Combine(outputFolder, $"{acr}_Stim_Index.csv");
         using (var writer = new StreamWriter(path, false))
         {
             writer.WriteLine("StimIndex,FileName");

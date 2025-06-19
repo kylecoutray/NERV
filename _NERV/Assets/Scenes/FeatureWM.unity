@@ -1342,7 +1342,7 @@ PrefabInstance:
     - target: {fileID: 2564661359344013740, guid: f61fc40fa23554a458280f498a1c4edd, type: 3}
       propertyPath: StimIndexFile
       value: 
-      objectReference: {fileID: 4900000, guid: fe79781b79c32444eb212605cbeb0b74, type: 3}
+      objectReference: {fileID: 4900000, guid: 751a2560582f24f9591cb645296e7a9d, type: 3}
     - target: {fileID: 2564661359344013743, guid: f61fc40fa23554a458280f498a1c4edd, type: 3}
       propertyPath: m_RootOrder
       value: 4

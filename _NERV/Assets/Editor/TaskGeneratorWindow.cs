@@ -5,9 +5,15 @@ using System.IO;
 using System.Text;
 using System.Linq;
 using System;
+using UnityEditor.Compilation;
 
 public class TaskGeneratorWindow : EditorWindow
 {
+    // remember last generation for manual attach:
+    private string _lastScriptPath;
+    private string _lastAcronym;
+    private GameObject _lastDepsGO;
+
     ExperimentDefinition experimentDef;
     GameObject dependenciesPrefab;
 
@@ -42,6 +48,16 @@ public class TaskGeneratorWindow : EditorWindow
 
         if (GUILayout.Button("Generate TrialManager"))
             GenerateTrialManager();
+
+        EditorGUILayout.Space();
+        if (!string.IsNullOrEmpty(_lastScriptPath))
+        {
+            if (GUILayout.Button("Attach TrialManager Now"))
+            {
+                AttachTrialManager();
+            }
+        }
+
     }
 
     void GenerateTrialManager()
@@ -60,8 +76,26 @@ public class TaskGeneratorWindow : EditorWindow
         Directory.CreateDirectory("Assets/Scenes");
         EditorSceneManager.SaveScene(scene, $"Assets/Scenes/{experimentDef.name}.unity");
 
+        // 1.5) Set skybox
+        // Load skybox material from Resources
+        var skyboxMat = Resources.Load<Material>("Skybox/blackStone");
+        if (skyboxMat != null)
+        {
+            RenderSettings.skybox = skyboxMat;
+            Debug.Log("[TaskGenerator] Skybox set from Resources/Skybox/blackStone");
+        }
+        else
+        {
+            Debug.LogWarning("[TaskGenerator] Skybox material not found in Resources.");
+        }
+
+
         // 2) Instantiate Dependencies
-        PrefabUtility.InstantiatePrefab(dependenciesPrefab);
+        GameObject depsGO = (GameObject)PrefabUtility.InstantiatePrefab(dependenciesPrefab);
+
+        var genericCfg = depsGO.GetComponent<GenericConfigManager>();
+        if (genericCfg != null)
+            genericCfg.Acronym = acr;
 
         // 3) Script folder
         string folder = $"Assets/Scripts/Tasks/{acr}/";
@@ -76,6 +110,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("using UnityEngine;");
         sb.AppendLine("using UnityEngine.UI;");
         sb.AppendLine("using TMPro;");
+        sb.AppendLine("using System.Linq;");
         sb.AppendLine();
 
         // --- enum ---
@@ -91,13 +126,21 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("{");
 
         // References
-        sb.AppendLine("    [Header(\"References\")]");
-        sb.AppendLine("    public Camera PlayerCamera;");
-        sb.AppendLine("    public StimulusSpawner Spawner;");
-        sb.AppendLine("    public TMP_Text FeedbackText;");
-        sb.AppendLine("    public TMP_Text ScoreText;");
-        sb.AppendLine("    public GameObject CoinUI;");
+        sb.AppendLine("    [Header(\"Dependencies (auto-wired)\")]");
+        sb.AppendLine("    public DependenciesContainer Deps;");
+
+        sb.AppendLine("    private Camera   PlayerCamera;");
+        sb.AppendLine("    private StimulusSpawner  Spawner;");
+        sb.AppendLine("    private TMPro.TMP_Text   FeedbackText;");
+        sb.AppendLine("    private TMPro.TMP_Text   ScoreText;");
+        sb.AppendLine("    private GameObject   CoinUI;");
+        sb.AppendLine("    private BlockPauseController PauseController;");
         sb.AppendLine();
+
+        // Block Information
+        sb.AppendLine("    [Header(\"Block Pause\")]");
+        sb.AppendLine("    public bool PauseBetweenBlocks = true;");
+        sb.AppendLine("    private int _totalBlocks;");
 
         // Timing & Scoring
         sb.AppendLine("    [Header(\"Timing & Scoring\")]");
@@ -146,19 +189,36 @@ public class TaskGeneratorWindow : EditorWindow
         // --- Start() ---
         sb.AppendLine("    void Start()");
         sb.AppendLine("    {");
-        sb.AppendLine("        if (Spawner == null) Spawner = FindObjectOfType<StimulusSpawner>();");
+        sb.AppendLine("         // Auto-grab everything from the one DependenciesContainer in the scene");
+        sb.AppendLine("        if (Deps == null)");
+        sb.AppendLine("            Deps = FindObjectOfType<DependenciesContainer>();");
+        sb.AppendLine();
+        sb.AppendLine("        // now assign local refs");
+        sb.AppendLine("        PlayerCamera    = Deps.MainCamera;");
+        sb.AppendLine("        Spawner         = Deps.Spawner;");
+        sb.AppendLine("        FeedbackText    = Deps.FeedbackText;");
+        sb.AppendLine("        ScoreText       = Deps.ScoreText;");
+        sb.AppendLine("        CoinUI          = Deps.CoinUI;");
+        sb.AppendLine("        PauseController = Deps.PauseController;");
+        sb.AppendLine();
+        sb.AppendLine();
         sb.AppendLine("        _trials       = GenericConfigManager.Instance.Trials;");
         sb.AppendLine("        _currentIndex = 0;");
+        sb.AppendLine();
+        sb.AppendLine("        // replace hard-coded TotalBlocks inspector value");
+        sb.AppendLine("        _totalBlocks = (_trials.Count > 0) ? _trials[_trials.Count - 1].BlockCount : 1;");
+        sb.AppendLine();
+        sb.AppendLine();
         sb.AppendLine("        UpdateScoreUI();");
         sb.AppendLine("        _audioSrc     = GetComponent<AudioSource>();");
-        sb.AppendLine("        _correctBeep  = Resources.Load<AudioClip>(\"AudioClips/correctBeep\");");
-        sb.AppendLine("        _errorBeep    = Resources.Load<AudioClip>(\"AudioClips/errorBeep\");");
-        sb.AppendLine("        _coinBarFullBeep = Resources.Load<AudioClip>(\"AudioClips/coinBarFullBeep\");");
+        sb.AppendLine("        _correctBeep  = Resources.Load<AudioClip>(\"AudioClips/positiveBeep\");");
+        sb.AppendLine("        _errorBeep    = Resources.Load<AudioClip>(\"AudioClips/negativeBeep\");");
+        sb.AppendLine("        _coinBarFullBeep = Resources.Load<AudioClip>(\"AudioClips/completeBar\");");
+        sb.AppendLine();
         sb.AppendLine("        if (CoinUI     != null) CoinUI.SetActive(UseCoinFeedback);");
         sb.AppendLine("        if (FeedbackText!= null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);");
         sb.AppendLine("        if (ScoreText   != null) ScoreText.gameObject.SetActive(ShowScoreUI);");
         sb.AppendLine("        CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);");
-        sb.AppendLine("        LogTTL(\"StartEndBlock\");");
         sb.AppendLine("        StartCoroutine(RunTrials());");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -166,6 +226,13 @@ public class TaskGeneratorWindow : EditorWindow
         // --- RunTrials() ---
         sb.AppendLine("    IEnumerator RunTrials()");
         sb.AppendLine("    {");
+        sb.AppendLine("        LogTTL(\"StartEndBlock\");");
+        sb.AppendLine("        int lastBlock = _trials[0].BlockCount;");
+        sb.AppendLine();
+        sb.AppendLine("        //Start with paused first scene");
+        sb.AppendLine("        if (PauseController != null)");
+        sb.AppendLine("            yield return StartCoroutine(PauseController.ShowPause(lastBlock, _totalBlocks));");
+        sb.AppendLine();
         sb.AppendLine("        while (_currentIndex < _trials.Count)");
         sb.AppendLine("        {");
         sb.AppendLine("            var trial = _trials[_currentIndex];");
@@ -231,6 +298,10 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine("            //   the blocks below are because of the IsFeedback checkmark");
                 sb.AppendLine("            // — feedback and beep —");
                 sb.AppendLine($"            bool correct = answered && (pickedIdx == (lastIdxs.Length > 0 ? lastIdxs[0] : -1));");
+                sb.AppendLine("            //flash feedback");
+                sb.AppendLine("            if (targetGO != null)");
+                sb.AppendLine("                StartCoroutine(FlashFeedback(targetGO, correct));");
+                sb.AppendLine();
                 sb.AppendLine("            if (correct)");
                 sb.AppendLine("            {");
                 sb.AppendLine("                LogTTL(\"SelectingTarget\");");
@@ -247,7 +318,7 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine("                UpdateScoreUI();");
                 sb.AppendLine("                _audioSrc.PlayOneShot(_errorBeep);");
                 sb.AppendLine("                LogTTL(\"AudioPlaying\");");
-                sb.AppendLine("                if (answered) { LogTTL(\"Choice\"); LogTTL(\"Fail\"); }");
+                sb.AppendLine("                if (answered) { LogTTL(\"TargetSelected\"); LogTTL(\"Fail\"); }");
                 sb.AppendLine("                else          { LogTTL(\"Timeout\"); LogTTL(\"Fail\"); }");
                 sb.AppendLine("                FeedbackText.text = answered ? \"Wrong!\" : \"Too Slow!\";");
                 sb.AppendLine("            }");
@@ -257,6 +328,9 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine("                if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);");
                 sb.AppendLine("                else         CoinController.Instance.RemoveCoins(1);");
                 sb.AppendLine("            }");
+                sb.AppendLine("            else if(UseCoinFeedback)");
+                sb.AppendLine("                CoinController.Instance.RemoveCoins(1);");
+                sb.AppendLine();
                 sb.AppendLine("            UpdateScoreUI();");
                 sb.AppendLine("            if (ShowFeedbackUI) FeedbackText.canvasRenderer.SetAlpha(1f);");
                 sb.AppendLine("            yield return new WaitForSeconds(FeedbackDuration);");
@@ -276,11 +350,32 @@ public class TaskGeneratorWindow : EditorWindow
         }
         // Normal increment if not Reset
         sb.AppendLine("            if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);");
+        sb.AppendLine();
+        sb.AppendLine();
+        sb.AppendLine("            //Block Handling");
+        sb.AppendLine("            trial = _trials[_currentIndex];");
+        sb.AppendLine("            int thisBlock = trial.BlockCount + 1;");
         sb.AppendLine("            _currentIndex++;");
+        sb.AppendLine();
+        sb.AppendLine("            //Only run when enabled");
+        sb.AppendLine("            if (PauseBetweenBlocks && thisBlock != lastBlock && thisBlock <= _totalBlocks)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                _currentIndex--; //This is so the log file has the correct header");
+        sb.AppendLine("                LogTTL(\"StartEndBlock\");");
+        sb.AppendLine("                _currentIndex++; //Put the value back for the rest of the trials");
+        sb.AppendLine();
+        sb.AppendLine("                if (PauseController != null)");
+        sb.AppendLine("                    yield return StartCoroutine(PauseController.ShowPause(thisBlock, _totalBlocks));");
+        sb.AppendLine("                lastBlock = thisBlock;");
+        sb.AppendLine("                LogTTL(\"StartEndBlock\");");
+        sb.AppendLine("            }");
         sb.AppendLine("        }");
+        sb.AppendLine();
         sb.AppendLine("        // end of all trials");
-        sb.AppendLine("        _currentIndex--;");
         sb.AppendLine("        LogTTL(\"StartEndBlock\");");
+        sb.AppendLine("        LogTTL(\"AllTrialsComplete\");");
+        sb.AppendLine("        if (PauseController != null)");
+        sb.AppendLine("            yield return StartCoroutine(PauseController.ShowPause(lastBlock+1, _totalBlocks));// the +1 is to send it to end game state");
         sb.AppendLine("    }");
         sb.AppendLine();
 
@@ -305,6 +400,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("        {");
         sb.AppendLine("            if (Input.GetMouseButtonDown(0))");
         sb.AppendLine("            {");
+        sb.AppendLine("                LogTTL(\"Clicked\");");
         sb.AppendLine("                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);");
         sb.AppendLine("                if (Physics.Raycast(ray, out var hit))");
         sb.AppendLine("                {");
@@ -334,12 +430,45 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    private void LogTTL(string label)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. ");
+        sb.AppendLine("            {");
+        sb.AppendLine("                // the -1 is to ensure it has the correct header");
+        sb.AppendLine("                // we increment to break out of our old loops, but still need this to be labeled correctly");
+        sb.AppendLine("                _currentIndex--;");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            LogManager.Instance.LogEvent(label, _trials[_currentIndex].TrialID);");
+        sb.AppendLine("            if (TTLEventCodes.TryGetValue(label, out int code))");
+        sb.AppendLine("                SerialTTLManager.Instance.LogEvent(label, code);");
+        sb.AppendLine();
+        sb.AppendLine("            //If you want SerialTTLManager to also log all events, uncomment this below."); 
+        sb.AppendLine("            //else");
+        sb.AppendLine("                //SerialTTLManager.Instance.LogEvent(label);");
+        sb.AppendLine("        }");
+        sb.AppendLine("    private IEnumerator FlashFeedback(GameObject go, bool correct)");
         sb.AppendLine("    {");
-        sb.AppendLine("        LogManager.Instance.LogEvent(label, _trials[_currentIndex].TrialID);");
-        sb.AppendLine("        if (TTLEventCodes.TryGetValue(label, out int code))");
-        sb.AppendLine("            SerialTTLManager.Instance.LogEvent(label, code);");
-        sb.AppendLine("        else");
-        sb.AppendLine("            SerialTTLManager.Instance.LogEvent(label);");
+        sb.AppendLine("        // grab all mesh renderers under the object");
+        sb.AppendLine("        var renderers = go.GetComponentsInChildren<Renderer>();");
+        sb.AppendLine("        // cache their original colors");
+        sb.AppendLine("        var originals = renderers.Select(r => r.material.color).ToArray();");
+        sb.AppendLine("        Color flashCol = correct ? Color.green : Color.red;");
+        sb.AppendLine();    
+        sb.AppendLine("        const int   flashes = 1;");
+        sb.AppendLine("        const float interval = 0.3f;  // quick");
+        sb.AppendLine();
+        sb.AppendLine("        for (int f = 0; f < flashes; f++)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            // set to flash color");
+        sb.AppendLine("            for (int i = 0; i < renderers.Length; i++)");
+        sb.AppendLine("                renderers[i].material.color = flashCol;");
+        sb.AppendLine("            yield return new WaitForSeconds(interval);");
+        sb.AppendLine(); 
+        sb.AppendLine("            // revert to original");
+        sb.AppendLine("            for (int i = 0; i < renderers.Length; i++)");
+        sb.AppendLine("                renderers[i].material.color = originals[i];");
+        sb.AppendLine("            yield return new WaitForSeconds(interval);");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}"); // end class
 
@@ -349,9 +478,51 @@ public class TaskGeneratorWindow : EditorWindow
         File.WriteAllText(path, sb.ToString());
 
         // force Unity to notice it
-        AssetDatabase.ImportAsset(path);
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
         AssetDatabase.Refresh();
-        // 6) Create GameObject
-        var managerGO = new GameObject($"TrialManager{acr}");
+        // … after AssetDatabase.Refresh() …
+        _lastScriptPath = path;
+        _lastAcronym    = acr;
+        _lastDepsGO     = depsGO;
+
+
+    }    // end of GenerateTrialManager()
+
+    private void AttachTrialManager()
+    {
+        // 1) load the compiled script
+        var ms = AssetDatabase.LoadAssetAtPath<MonoScript>(_lastScriptPath);
+        var managerType = ms?.GetClass();
+        if (managerType == null)
+        {
+            Debug.LogError($"[TG] Couldn’t find public class in {_lastScriptPath}");
+            return;
+        }
+
+        // 2) create the GameObject & add component
+        var go   = new GameObject($"TrialManager{_lastAcronym}");
+        var comp = go.AddComponent(managerType);
+        go.AddComponent<AudioSource>();
+
+        // 3) wire its Deps field
+        var field = managerType.GetField("Deps");
+        if (field != null && _lastDepsGO != null)
+        {
+            var dc = _lastDepsGO.GetComponent<DependenciesContainer>();
+            if (dc != null) field.SetValue(comp, dc);
+        }
+
+        // 4) mark & save the scene
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+
+        Debug.Log($"[TG] Attached '{go.name}' with component {managerType.Name}");
+        
+        // clear so button disappears
+        _lastScriptPath = null;
+        _lastAcronym    = null;
+        _lastDepsGO     = null;
     }
+
 }

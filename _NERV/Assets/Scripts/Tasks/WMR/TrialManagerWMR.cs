@@ -18,12 +18,22 @@ public enum TrialStateWMR
 
 public class TrialManagerWMR : MonoBehaviour
 {
-    [Header("References")]
-    public Camera PlayerCamera;
-    public StimulusSpawner Spawner;
-    public TMP_Text FeedbackText;
-    public TMP_Text ScoreText;
-    public GameObject CoinUI;
+    // You will drag & drop dependencies here
+    [Header("Dependencies (auto-wired)")]
+    public DependenciesContainer Deps;
+
+    private Camera                PlayerCamera;
+    private StimulusSpawner       Spawner;
+    private TMPro.TMP_Text        FeedbackText;
+    private TMPro.TMP_Text        ScoreText;
+    private GameObject            CoinUI;
+    private BlockPauseController  PauseController;
+
+
+
+    [Header("Block Pause")]
+    public bool PauseBetweenBlocks = true;
+    private int _totalBlocks;
 
     [Header("Timing & Scoring")]
     public float MaxChoiceResponseTime = 10f;
@@ -39,6 +49,7 @@ public class TrialManagerWMR : MonoBehaviour
     private List<TrialData> _trials;
     private int _currentIndex;
     private int _score = 0;
+    
 
     private AudioSource _audioSrc;
     private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;
@@ -61,28 +72,51 @@ public class TrialManagerWMR : MonoBehaviour
 
     void Start()
     {
-        if (Spawner == null) Spawner = FindObjectOfType<StimulusSpawner>();
+        // Auto-grab everything from the one DependenciesContainer in the scene
+        if (Deps == null)
+            Deps = FindObjectOfType<DependenciesContainer>();
+
+        // now assign local refs
+        PlayerCamera    = Deps.MainCamera;
+        Spawner         = Deps.Spawner;
+        FeedbackText    = Deps.FeedbackText;
+        ScoreText       = Deps.ScoreText;
+        CoinUI          = Deps.CoinUI;
+        PauseController = Deps.PauseController;
+        
         _trials       = GenericConfigManager.Instance.Trials;
         _currentIndex = 0;
+
+        // replace hard-coded TotalBlocks inspector value:
+        _totalBlocks  = (_trials.Count > 0) ? _trials[_trials.Count - 1].BlockCount : 1;
+
+
         UpdateScoreUI();
         _audioSrc     = GetComponent<AudioSource>();
-        _correctBeep  = Resources.Load<AudioClip>("AudioClips/correctBeep");
-        _errorBeep    = Resources.Load<AudioClip>("AudioClips/errorBeep");
-        _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/coinBarFullBeep");
-        if (CoinUI     != null) CoinUI.SetActive(UseCoinFeedback);
+        _correctBeep  = Resources.Load<AudioClip>("AudioClips/positiveBeep");
+        _errorBeep    = Resources.Load<AudioClip>("AudioClips/negativeBeep");
+        _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/completeBar");
+
+        if (CoinUI != null) CoinUI.SetActive(UseCoinFeedback);
         if (FeedbackText!= null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
         if (ScoreText   != null) ScoreText.gameObject.SetActive(ShowScoreUI);
         CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);
-        LogTTL("StartEndBlock");
         StartCoroutine(RunTrials());
     }
 
     IEnumerator RunTrials()
     {
+        LogTTL("StartEndBlock");
+        int lastBlock = _trials[0].BlockCount;
+
+        //Start with paused first scene
+        if (PauseController != null)
+            yield return StartCoroutine(PauseController.ShowPause(lastBlock, _totalBlocks));
+        
         while (_currentIndex < _trials.Count)
         {
             var trial = _trials[_currentIndex];
-       
+
             // collect all stimuli across X rounds
             var spawnedItems = new List<GameObject>();
             int[] lastIdxs = new int[0];
@@ -127,17 +161,17 @@ public class TrialManagerWMR : MonoBehaviour
             yield return null;
             // — CHOICE —
             LogTTL("Choice");
-            bool answered   = false;
-            int  pickedIdx  = -1;
+            bool answered = false;
+            int pickedIdx = -1;
             float reactionT = 0f;
             yield return StartCoroutine(WaitForChoice((i, rt) =>
             {
-                answered  = true;
+                answered = true;
                 pickedIdx = i;
                 reactionT = rt;
             }));
 
-            // just before you call Find(…):
+            //
             spawnedItems.RemoveAll(go => go == null);
             GameObject targetGO = spawnedItems.Find(go => go.GetComponent<StimulusID>().Index == pickedIdx);
 
@@ -145,7 +179,6 @@ public class TrialManagerWMR : MonoBehaviour
             yield return null;
             // — FEEDBACK —
             LogTTL("Feedback");
-            // chatgpt: the blocks below are because of the IsFeedback checkmark
             // — feedback and beep —
             bool correct = answered && (pickedIdx == (lastIdxs.Length > 0 ? lastIdxs[0] : -1));
             if (correct)
@@ -164,15 +197,15 @@ public class TrialManagerWMR : MonoBehaviour
                 UpdateScoreUI();
                 _audioSrc.PlayOneShot(_errorBeep);
                 LogTTL("AudioPlaying");
-                if (answered) { LogTTL("Choice"); LogTTL("Fail"); }
-                else          { LogTTL("Timeout"); LogTTL("Fail"); }
+                if (answered) { LogTTL("TargetSelected"); LogTTL("Fail"); }
+                else { LogTTL("Timeout"); LogTTL("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
             Vector2 clickScreenPos = Input.mousePosition;
             if (pickedIdx >= 0 && UseCoinFeedback)
             {
                 if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);
-                else         CoinController.Instance.RemoveCoins(1);
+                else CoinController.Instance.RemoveCoins(1);
             }
             UpdateScoreUI();
             if (ShowFeedbackUI) FeedbackText.canvasRenderer.SetAlpha(1f);
@@ -181,16 +214,39 @@ public class TrialManagerWMR : MonoBehaviour
             yield return null;
             // — RESET —
             LogTTL("Reset");
-            // chatgpt: the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
             yield return null;
             if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);
+
+
+            //Block Handling
+            trial = _trials[_currentIndex];
+            int thisBlock = trial.BlockCount + 1;
             _currentIndex++;
+
+            //Only run when enabled
+            if (PauseBetweenBlocks && thisBlock != lastBlock && thisBlock <= _totalBlocks)
+            {
+                _currentIndex--; //This is so the Log file has the correct header
+                LogTTL("StartEndBlock");
+                _currentIndex++; //Put the value back for the rest of the trials
+
+                if (PauseController != null)
+                    yield return StartCoroutine(PauseController.ShowPause(thisBlock, _totalBlocks));
+                lastBlock = thisBlock;
+                LogTTL("StartEndBlock");
+            }
+
+
         }
-        // end of all trials
-        _currentIndex--;
+
+        // End of all trials
         LogTTL("StartEndBlock");
+        LogTTL("AllTrialsComplete");
+        if (PauseController != null)
+            yield return StartCoroutine(PauseController.ShowPause(lastBlock+1, _totalBlocks));// the +1 is to send it to end game state
+
     }
 
     IEnumerator ShowFeedback()
@@ -246,10 +302,19 @@ public class TrialManagerWMR : MonoBehaviour
 
     private void LogTTL(string label)
     {
+        if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
+        {
+            // the -1 is to ensure it has the correct header
+            // we increment to break out of our old loops, but still need this to be labeled correctly
+            _currentIndex--;
+        }
+
         LogManager.Instance.LogEvent(label, _trials[_currentIndex].TrialID);
         if (TTLEventCodes.TryGetValue(label, out int code))
             SerialTTLManager.Instance.LogEvent(label, code);
-        else
-            SerialTTLManager.Instance.LogEvent(label);
+
+        //If you want SerialTTLManager to also log all events, uncomment this below. 
+        //else
+            //SerialTTLManager.Instance.LogEvent(label);
     }
 }

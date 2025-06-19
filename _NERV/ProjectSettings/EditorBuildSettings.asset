@@ -11,4 +11,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/FeatureWM.unity
     guid: af50006b3c6a14262922c665ccd6c042
+  - enabled: 1
+    path: Assets/Scenes/WMRemake.unity
+    guid: 1ab92669795a3471984cffc5a5bc87e9
+  - enabled: 1
+    path: Assets/Scenes/KCC_Test_Scene.unity
+    guid: 47e934e1134a646e0b636a8864daa920
   m_configObjects: {}

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Camera))]
 public class VisionEffectController : MonoBehaviour
@@ -8,7 +9,7 @@ public class VisionEffectController : MonoBehaviour
     public Material liquidScannerMat;
 
     private enum VisionMode { Off, Terminal, Glitch, LiquidScanner }
-    private VisionMode currentMode = VisionMode.Off;
+    private VisionMode currentMode = VisionMode.Terminal;
 
     Vector3 originalCamPos;
 
@@ -25,9 +26,16 @@ public class VisionEffectController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.N)) currentMode = VisionMode.Off;
 
+        // Disable component if we're not in the TaskSelector scene
+        if (SceneManager.GetActiveScene().name != "TaskSelector")
+        {
+            currentMode = VisionMode.Off;
+            return;
+        }
+
         if (currentMode == VisionMode.Glitch)
         {
-            // 💥 Add screen shake when glitch is active
+            //  Add screen shake when glitch is active
             float intensity = Random.Range(0.01f, 0.04f);
             transform.localPosition = originalCamPos + Random.insideUnitSphere * intensity;
         }

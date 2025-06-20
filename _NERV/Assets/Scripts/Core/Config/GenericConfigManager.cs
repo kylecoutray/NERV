@@ -29,7 +29,6 @@ public class GenericConfigManager : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
 
         // Find acronym from TrialManager{acr} 
         if (string.IsNullOrEmpty(Acronym))

@@ -2,6 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using UnityEngine.SceneManagement;
+
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -35,22 +38,23 @@ public class BlockPauseController : MonoBehaviour
         // reset flag
         _continuePressed = false;
 
-        //End of game conditions:
+        // End of game conditions:
         if (blockIndex > totalBlocks)
         {
             BlockLabelText.text = "GAME COMPLETE";
             PauseCanvas.gameObject.SetActive(true);
+
+            // Wait for the player to press continue
             while (!_continuePressed)
                 yield return null;
 
             Debug.Log("END OF GAME");
-            //End Play Mode (FUTURE: GO TO Menu Scene)
-            #if UNITY_EDITOR
-                EditorApplication.isPlaying = false;
-            #else
-                Application.Quit();
-            #endif
+
+            // Load TaskSelector scene
+            SceneManager.LoadScene("TaskSelector");
+            yield break;
         }
+
 
         // safety checks
         if (PauseCanvas == null || BlockLabelText == null || ContinueButton == null)

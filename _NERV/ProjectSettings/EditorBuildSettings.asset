@@ -15,6 +15,9 @@ EditorBuildSettings:
     path: Assets/Scenes/WMRemake.unity
     guid: 1ab92669795a3471984cffc5a5bc87e9
   - enabled: 1
-    path: Assets/Scenes/KCC_Test_Scene.unity
-    guid: 47e934e1134a646e0b636a8864daa920
+    path: Assets/Scenes/MatchNonmatch.unity
+    guid: 26900fbb62e0d4bb68e87fb7580f64c2
+  - enabled: 1
+    path: Assets/Scenes/Phase2Test.unity
+    guid: bb246e91ac2a24204b6b5a745fe253ce
   m_configObjects: {}

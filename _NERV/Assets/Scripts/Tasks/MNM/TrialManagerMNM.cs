@@ -23,11 +23,11 @@ public class TrialManagerMNM : MonoBehaviour
 {
     [Header("Dependencies (auto-wired)")]
     public DependenciesContainer Deps;
-    private Camera   PlayerCamera;
-    private StimulusSpawner  Spawner;
-    private TMPro.TMP_Text   FeedbackText;
-    private TMPro.TMP_Text   ScoreText;
-    private GameObject   CoinUI;
+    private Camera PlayerCamera;
+    private StimulusSpawner Spawner;
+    private TMPro.TMP_Text FeedbackText;
+    private TMPro.TMP_Text ScoreText;
+    private GameObject CoinUI;
     private BlockPauseController PauseController;
 
     [Header("Block Pause")]
@@ -61,43 +61,55 @@ public class TrialManagerMNM : MonoBehaviour
     public bool ShowScoreUI = true;
     public bool ShowFeedbackUI = true;
 
+    // Pause Handling
+    private bool _pauseRequested = false;
+    private bool _inPause = false;
+
     [Header("Match/Non-Match Options")]
     public GameObject MatchPrefab;      // drag in your “match.png” prefab
     public GameObject NonMatchPrefab;   // drag in your “nonmatch.png” prefab
-    public float      ChoiceY = 1.5f;   // vertical offset for match (non-match is -ChoiceY)
+    public float ChoiceY = 1.5f;   // vertical offset for match (non-match is -ChoiceY)
 
 
     [Header("Fixation Dot")]
     public GameObject FixationDotPrefab;    // drag your Prefab here
-    public float      FixationDotSize = 0.2f; // world‐units diameter
+    public float FixationDotSize = 0.2f; // world‐units diameter
     public bool UseFixationDot = false;
 
 
-    private Dictionary<string,int> TTLEventCodes = new Dictionary<string,int>
+    private Dictionary<string, int> TTLEventCodes = new Dictionary<string, int>
     {
         { "Fixation", 1 },
         { "CueOn", 2 },
         { "SampleOn", 3 },
         { "Choice", 4 },
         { "Feedback", 5 },
+        { "StartEndBlock", 8}
     };
 
     void Start()
     {
-         // Auto-grab everything from the one DependenciesContainer in the scene
+        //Force the GenericConfigManager into existence
+        if (GenericConfigManager.Instance == null)
+        {
+            new GameObject("GenericConfigManager")
+                .AddComponent<GenericConfigManager>();
+        }
+
+        // Auto-grab everything from the one DependenciesContainer in the scene
         if (Deps == null)
             Deps = FindObjectOfType<DependenciesContainer>();
 
         // now assign local refs
-        PlayerCamera    = Deps.MainCamera;
-        Spawner         = Deps.Spawner;
-        FeedbackText    = Deps.FeedbackText;
-        ScoreText       = Deps.ScoreText;
-        CoinUI          = Deps.CoinUI;
+        PlayerCamera = Deps.MainCamera;
+        Spawner = Deps.Spawner;
+        FeedbackText = Deps.FeedbackText;
+        ScoreText = Deps.ScoreText;
+        CoinUI = Deps.CoinUI;
         PauseController = Deps.PauseController;
 
 
-        _trials       = GenericConfigManager.Instance.Trials;
+        _trials = GenericConfigManager.Instance.Trials;
         _currentIndex = 0;
 
         // replace hard-coded TotalBlocks inspector value
@@ -105,27 +117,34 @@ public class TrialManagerMNM : MonoBehaviour
 
 
         UpdateScoreUI();
-        _audioSrc     = GetComponent<AudioSource>();
-        _correctBeep  = Resources.Load<AudioClip>("AudioClips/positiveBeep");
-        _errorBeep    = Resources.Load<AudioClip>("AudioClips/negativeBeep");
+        _audioSrc = GetComponent<AudioSource>();
+        _correctBeep = Resources.Load<AudioClip>("AudioClips/positiveBeep");
+        _errorBeep = Resources.Load<AudioClip>("AudioClips/negativeBeep");
         _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/completeBar");
 
-        if (CoinUI     != null) CoinUI.SetActive(UseCoinFeedback);
-        if (FeedbackText!= null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
-        if (ScoreText   != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+        if (CoinUI != null) CoinUI.SetActive(UseCoinFeedback);
+        if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+        if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
         CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);
         StartCoroutine(RunTrials());
     }
 
     IEnumerator RunTrials()
     {
-        LogTTL("StartEndBlock");
         int lastBlock = _trials[0].BlockCount;
 
-        //Start with paused first scene
-        if (PauseController != null)
-            yield return StartCoroutine(PauseController.ShowPause(lastBlock, _totalBlocks));
+        //Start with paused first scene    
+        if (PauseController != null && _trials?.Count > 0)
+        {
+            yield return StartCoroutine(
+                _trials[0].TrialID == "PRACTICE"
+                    ? PauseController.ShowPause("PRACTICE") // displays practice if we set up practice sessions.
+                    : PauseController.ShowPause(lastBlock, _totalBlocks)
+            );
+        }
 
+
+        LogEvent("StartEndBlock");
         while (_currentIndex < _trials.Count)
         {
             var trial = _trials[_currentIndex];
@@ -133,17 +152,18 @@ public class TrialManagerMNM : MonoBehaviour
             int[] lastIdxs = new int[0];
 
             // — IDLE —
-            LogTTL("Idle");
-            yield return new WaitForSeconds(IdleDuration);
+            LogEvent("Idle");
+            yield return StartCoroutine(WaitInterruptable(IdleDuration));
 
 
             // — FIXATION —
-            LogTTL("Fixation");
-
+            LogEvent("Fixation");
+            yield return StartCoroutine(WaitInterruptable(FixationDuration));
+            
             /////////////////////////////////
             // custom code for this MNM game:
             // 1) spawn & size
-            if (UseFixationDot == true) 
+            if (UseFixationDot == true)
             {
                 GameObject fixDot = null;
                 if (FixationDotPrefab != null)
@@ -158,7 +178,7 @@ public class TrialManagerMNM : MonoBehaviour
                 }
 
                 // 2) wait out
-                yield return new WaitForSeconds(FixationDuration);
+                yield return StartCoroutine(WaitInterruptable(FixationDuration));
 
                 // 3) cleanup
                 if (fixDot != null)
@@ -167,7 +187,7 @@ public class TrialManagerMNM : MonoBehaviour
 
 
             // — CUEON —
-            LogTTL("CueOn");
+            LogEvent("CueOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs1 = trial.GetStimIndices("CueOn");
             var locs1 = trial.GetStimLocations("CueOn");
@@ -178,18 +198,18 @@ public class TrialManagerMNM : MonoBehaviour
                 lastIdxs = idxs1;
             }
 
-            yield return new WaitForSeconds(CueOnDuration);
+            yield return StartCoroutine(WaitInterruptable(CueOnDuration));
             // — CUEOFF —
-            LogTTL("CueOff");
+            LogEvent("CueOff");
             //   the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
             yield return null;
             // — DELAY1 —
-            LogTTL("Delay1");
-            yield return new WaitForSeconds(Delay1Duration);
+            LogEvent("Delay1");
+            yield return StartCoroutine(WaitInterruptable(Delay1Duration));
             // — SAMPLEON —
-            LogTTL("SampleOn");
+            LogEvent("SampleOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs2 = trial.GetStimIndices("SampleOn");
             var locs2 = trial.GetStimLocations("SampleOn");
@@ -200,29 +220,29 @@ public class TrialManagerMNM : MonoBehaviour
                 lastIdxs = idxs2;
             }
 
-            yield return new WaitForSeconds(SampleOnDuration);
+            yield return StartCoroutine(WaitInterruptable(SampleOnDuration));
             // — SAMPLEOFF —
-            LogTTL("SampleOff");
+            LogEvent("SampleOff");
             //   the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
             yield return null;
             // — DELAY2 —
-            LogTTL("Delay2");
-            yield return new WaitForSeconds(Delay2Duration);
+            LogEvent("Delay2");
+            yield return StartCoroutine(WaitInterruptable(Delay2Duration));
 
 
             // — CHOICE —
             ////////////////////////
             /// Custom CHOICE AND FEEDBACK Logic for this Game. 
             // — CHOICE OPTIONS —  
-            LogTTL("Choice");
+            LogEvent("Choice");
 
             // 1) Determine correct answer  
             //    true ⇒ match is correct, false ⇒ non-match
-            int cueIdx    = trial.GetStimIndices("CueOn")[0];
+            int cueIdx = trial.GetStimIndices("CueOn")[0];
             int sampleIdx = trial.GetStimIndices("SampleOn")[0];
-            bool isMatch  = (cueIdx == sampleIdx);
+            bool isMatch = (cueIdx == sampleIdx);
             int correctIdx = isMatch ? 0 : 1;  // we’ll assign 0→match, 1→non-match
 
             // 2) Spawn two buttons  
@@ -231,7 +251,7 @@ public class TrialManagerMNM : MonoBehaviour
             // match (index 0)  
             var goMatch = Instantiate(
                 MatchPrefab,
-                new Vector3(0,  ChoiceY, 0),
+                new Vector3(0, ChoiceY, 0),
                 Quaternion.identity,
                 transform
             );
@@ -251,15 +271,15 @@ public class TrialManagerMNM : MonoBehaviour
             choiceItems.Add(goNon);
 
             // 3) Wait for click or timeout  
-            bool answered  = false;
-            int  pickedIdx = -1;
-            float rt       = 0f;
+            bool answered = false;
+            int pickedIdx = -1;
+            float rt = 0f;
 
             yield return StartCoroutine(WaitForChoice((i, t) =>
             {
-                answered  = true;
+                answered = true;
                 pickedIdx = i;
-                rt        = t;
+                rt = t;
             }));
 
             // 4) Identify the clicked GameObject  
@@ -277,17 +297,17 @@ public class TrialManagerMNM : MonoBehaviour
             if (correct)
             {
                 _score += PointsPerCorrect;
-                LogTTL("Success");
+                LogEvent("Success");
                 _audioSrc.PlayOneShot(_correctBeep);
-                LogTTL("AudioPlaying");  // if you want TTL on the beep
+                LogEvent("AudioPlaying");  // if you want TTL on the beep
                 FeedbackText.text = $"+{PointsPerCorrect}";
             }
             else
             {
                 _score += PointsPerWrong;
-                LogTTL(answered ? "Fail" : "Timeout");
+                LogEvent(answered ? "Fail" : "Timeout");
                 _audioSrc.PlayOneShot(_errorBeep);
-                LogTTL("AudioPlaying");  // if you want TTL on the beep
+                LogEvent("AudioPlaying");  // if you want TTL on the beep
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
 
@@ -298,50 +318,54 @@ public class TrialManagerMNM : MonoBehaviour
             {
                 var clickPos = Input.mousePosition;
                 if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickPos);
-                else         CoinController.Instance.RemoveCoins(1);
+                else CoinController.Instance.RemoveCoins(1);
             }
 
             // 9) wait out the feedback UI
-            yield return new WaitForSeconds(FeedbackDuration);
-    
+            yield return StartCoroutine(WaitInterruptable(FeedbackDuration));
+
             if (ShowFeedbackUI)       // fade‐out
                 StartCoroutine(ShowFeedback());
 
-            LogTTL("Reset");
+            LogEvent("Reset");
             // 10) Clean up choice items  
             foreach (var go in choiceItems)
                 Destroy(go);
 
             //Block Handling
-            trial = _trials[_currentIndex];
-            int thisBlock = trial.BlockCount + 1;
-            _currentIndex++;
+            int thisBlock = trial.BlockCount;
+            int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;
+
 
             //Only run when enabled
-            if (PauseBetweenBlocks && thisBlock != lastBlock && thisBlock <= _totalBlocks)
+            if (PauseBetweenBlocks && nextBlock != thisBlock && nextBlock != -1)
             {
-                _currentIndex--; //This is so the log file has the correct header
-                LogTTL("StartEndBlock");
-                _currentIndex++; //Put the value back for the rest of the trials
+                LogEvent("StartEndBlock");
 
                 if (PauseController != null)
-                    yield return StartCoroutine(PauseController.ShowPause(thisBlock, _totalBlocks));
-                lastBlock = thisBlock;
-                LogTTL("StartEndBlock");
+                    yield return StartCoroutine(PauseController.ShowPause(nextBlock, _totalBlocks));
+                _currentIndex++; // Make sure we have the right header
+                LogEvent("StartEndBlock");
+                _currentIndex--; // Set the index back since we increment outside this loop
             }
+            // next trial incrementations
+            lastBlock = thisBlock; //keep true last block
+            _currentIndex++; // advance to the next trial
         }
 
+
         // end of all trials
-        LogTTL("StartEndBlock");
-        LogTTL("AllTrialsComplete");
+        _currentIndex--;
+        LogEvent("StartEndBlock");
+        LogEvent("AllTrialsComplete");
         if (PauseController != null)
-            yield return StartCoroutine(PauseController.ShowPause(lastBlock+1, _totalBlocks));// the +1 is to send it to end game state
+            yield return StartCoroutine(PauseController.ShowPause(-1, _totalBlocks));// the -1 is to send it to end game state
     }
 
     IEnumerator ShowFeedback()
     {
         FeedbackText.canvasRenderer.SetAlpha(1f);
-        yield return new WaitForSeconds(FeedbackDuration);
+        yield return StartCoroutine(WaitInterruptable(FeedbackDuration));
         if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);
     }
 
@@ -356,9 +380,19 @@ public class TrialManagerMNM : MonoBehaviour
         float startTime = Time.time;
         while (Time.time - startTime < MaxChoiceResponseTime)
         {
+            if (_pauseRequested)
+            {
+                _inPause = true;
+                float timePassed = Time.time - startTime;
+                _pauseRequested = false;
+                yield return StartCoroutine(PauseController.ShowPause("PAUSED"));
+                startTime = Time.time - timePassed;
+            }
+            _inPause = false;
+ 
             if (Input.GetMouseButtonDown(0))
             {
-                LogTTL("Clicked");
+                LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit))
                 {
@@ -380,31 +414,33 @@ public class TrialManagerMNM : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.S))
         {
-            ShowScoreUI    = !ShowScoreUI;
+            ShowScoreUI = !ShowScoreUI;
             ShowFeedbackUI = !ShowFeedbackUI;
-            if (ScoreText    != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+            if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
             if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
         }
+            if (Input.GetKeyDown(KeyCode.P) && _inPause == false)
+                _pauseRequested = true;
     }
 
-    private void LogTTL(string label)
+    private void LogEvent(string label)
+    {
+        if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
         {
-            if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
-            {
-                // the -1 is to ensure it has the correct header
-                // we increment to break out of our old loops, but still need this to be labeled correctly
-                _currentIndex--;
-            }
-
-            LogManager.Instance.LogEvent(label, _trials[_currentIndex].TrialID);
-            if (TTLEventCodes.TryGetValue(label, out int code))
-                SerialTTLManager.Instance.LogEvent(label, code);
-
-            //If you want SerialTTLManager to also log all events, uncomment this below.
-            //else
-                //SerialTTLManager.Instance.LogEvent(label);
+            // the -1 is to ensure it has the correct header
+            // we increment to break out of our old loops, but still need this to be labeled correctly
+            _currentIndex--;
         }
 
+        string trialID = _trials[_currentIndex].TrialID;
+
+        // 1) Always log to ALL_LOGS
+        SessionLogManager.Instance.LogAll(trialID, label, "");
+
+        // 2) If it has a TTL code, log to TTL_LOGS
+        if (TTLEventCodes.TryGetValue(label, out int code))
+            SessionLogManager.Instance.LogTTL(trialID, label, code);
+    }
     //////////////
     /// Custom FlashFeedback to account for match/nonmatch sprite colors
     /// ////////////    
@@ -430,7 +466,7 @@ public class TrialManagerMNM : MonoBehaviour
         for (int i = 0; i < rends.Length; i++)
             origMats[i] = rends[i].material;
 
-        const int   flashes  = 1;
+        const int flashes = 1;
         const float interval = 0.3f;
 
         for (int f = 0; f < flashes; f++)
@@ -438,16 +474,34 @@ public class TrialManagerMNM : MonoBehaviour
             // swap in flash material
             foreach (var r in rends)
                 r.material = flashMat;
-            yield return new WaitForSeconds(interval);
+            yield return StartCoroutine(WaitInterruptable(interval));
 
             // restore originals
             for (int i = 0; i < rends.Length; i++)
                 rends[i].material = origMats[i];
-            yield return new WaitForSeconds(interval);
+            yield return StartCoroutine(WaitInterruptable(interval));
         }
 
         // cleanup
         UnityEngine.Object.Destroy(flashMat);
     }
 
+    // added this to allow pause scene functionality
+    private IEnumerator WaitInterruptable(float duration)
+    {
+        float t0 = Time.time;
+        while (Time.time - t0 < duration)
+        {
+            // if user hit P, immediately pause
+            if (_pauseRequested && PauseController != null)
+            {
+                _inPause = true;
+                _pauseRequested = false;
+                yield return StartCoroutine(PauseController.ShowPause("PAUSED"));
+                
+            }
+            _inPause = false;
+            yield return null;  // next frame
+        }
+    }
 }

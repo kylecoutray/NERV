@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Linq;
+using System;
 
 public enum TrialStateP2T
 {
@@ -67,6 +68,13 @@ public class TrialManagerP2T : MonoBehaviour
 
     void Start()
     {
+            // Force the GenericConfigManager into existence
+        if (GenericConfigManager.Instance == null)
+        {
+            new GameObject("GenericConfigManager")
+                .AddComponent<GenericConfigManager>();
+        }
+        Debug.Log("Running start TrialManagerP2t");
          // Auto-grab everything from the one DependenciesContainer in the scene
         if (Deps == null)
             Deps = FindObjectOfType<DependenciesContainer>();
@@ -102,12 +110,14 @@ public class TrialManagerP2T : MonoBehaviour
 
     IEnumerator RunTrials()
     {
-        LogTTL("StartEndBlock");
+        
         int lastBlock = _trials[0].BlockCount;
 
         //Start with paused first scene
         if (PauseController != null)
             yield return StartCoroutine(PauseController.ShowPause(lastBlock, _totalBlocks));
+
+        LogEvent("StartEndBlock");
 
         while (_currentIndex < _trials.Count)
         {
@@ -116,10 +126,10 @@ public class TrialManagerP2T : MonoBehaviour
             int[] lastIdxs = new int[0];
 
             // — IDLE —
-            LogTTL("Idle");
+            LogEvent("Idle");
             yield return new WaitForSeconds(IdleDuration);
             // — SAMPLEON —
-            LogTTL("SampleOn");
+            LogEvent("SampleOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs1 = trial.GetStimIndices("SampleOn");
             var locs1 = trial.GetStimLocations("SampleOn");
@@ -132,16 +142,16 @@ public class TrialManagerP2T : MonoBehaviour
 
             yield return new WaitForSeconds(SampleOnDuration);
             // — SAMPLEOFF —
-            LogTTL("SampleOff");
+            LogEvent("SampleOff");
             //   the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
             yield return new WaitForSeconds(SampleOffDuration);
             // — POSTSAMPLEDELAY —
-            LogTTL("PostSampleDelay");
+            LogEvent("PostSampleDelay");
             yield return new WaitForSeconds(PostSampleDelayDuration);
             // — TARGETON —
-            LogTTL("TargetOn");
+            LogEvent("TargetOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs2 = trial.GetStimIndices("TargetOn");
             var locs2 = trial.GetStimLocations("TargetOn");
@@ -154,7 +164,7 @@ public class TrialManagerP2T : MonoBehaviour
 
             yield return null;
             // — CHOICE —
-            LogTTL("Choice");
+            LogEvent("Choice");
             bool answered   = false;
             int  pickedIdx  = -1;
             float reactionT = 0f;
@@ -171,7 +181,7 @@ public class TrialManagerP2T : MonoBehaviour
 
             yield return null;
             // — FEEDBACK —
-            LogTTL("Feedback");
+            LogEvent("Feedback");
             //   the blocks below are because of the IsFeedback checkmark
             // — feedback and beep —
             bool correct = answered && (pickedIdx == (lastIdxs.Length > 0 ? lastIdxs[0] : -1));
@@ -181,12 +191,12 @@ public class TrialManagerP2T : MonoBehaviour
 
             if (correct)
             {
-                LogTTL("SelectingTarget");
+                LogEvent("SelectingTarget");
                 _score += PointsPerCorrect;
                 if (!CoinController.Instance.CoinBarWasJustFilled)
                     _audioSrc.PlayOneShot(_correctBeep);
-                LogTTL("AudioPlaying");
-                LogTTL("Success");
+                LogEvent("AudioPlaying");
+                LogEvent("Success");
                 FeedbackText.text = $"+{PointsPerCorrect}";
             }
             else
@@ -194,9 +204,9 @@ public class TrialManagerP2T : MonoBehaviour
                 _score += PointsPerWrong;
                 UpdateScoreUI();
                 _audioSrc.PlayOneShot(_errorBeep);
-                LogTTL("AudioPlaying");
-                if (answered) { LogTTL("TargetSelected"); LogTTL("Fail"); }
-                else          { LogTTL("Timeout"); LogTTL("Fail"); }
+                LogEvent("AudioPlaying");
+                if (answered) { LogEvent("TargetSelected"); LogEvent("Fail"); }
+                else          { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
             Vector2 clickScreenPos = Input.mousePosition;
@@ -214,7 +224,7 @@ public class TrialManagerP2T : MonoBehaviour
 
             yield return null;
             // — RESET —
-            LogTTL("Reset");
+            LogEvent("Reset");
             //   the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
@@ -223,29 +233,32 @@ public class TrialManagerP2T : MonoBehaviour
 
 
             //Block Handling
-            trial = _trials[_currentIndex];
-            int thisBlock = trial.BlockCount + 1;
-            _currentIndex++;
+            int thisBlock = trial.BlockCount;
+            int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex+1].BlockCount : -1;
+            
 
             //Only run when enabled
-            if (PauseBetweenBlocks && thisBlock != lastBlock && thisBlock <= _totalBlocks)
+            if (PauseBetweenBlocks && nextBlock != thisBlock && nextBlock != -1)
             {
-                _currentIndex--; //This is so the log file has the correct header
-                LogTTL("StartEndBlock");
-                _currentIndex++; //Put the value back for the rest of the trials
+                LogEvent("StartEndBlock");
 
                 if (PauseController != null)
-                    yield return StartCoroutine(PauseController.ShowPause(thisBlock, _totalBlocks));
-                lastBlock = thisBlock;
-                LogTTL("StartEndBlock");
+                    yield return StartCoroutine(PauseController.ShowPause(nextBlock, _totalBlocks));
+                _currentIndex ++;
+                LogEvent("StartEndBlock");
+                _currentIndex --;
             }
+            // next trial
+            lastBlock = thisBlock; // keep true last block
+            _currentIndex++; // advance to next trial
         }
 
+        _currentIndex--; // make sure log has current header
         // end of all trials
-        LogTTL("StartEndBlock");
-        LogTTL("AllTrialsComplete");
+        LogEvent("StartEndBlock");
+        LogEvent("AllTrialsComplete");
         if (PauseController != null)
-            yield return StartCoroutine(PauseController.ShowPause(lastBlock+1, _totalBlocks));// the +1 is to send it to end game state
+            yield return StartCoroutine(PauseController.ShowPause(-1, _totalBlocks));// the +1 is to send it to end game state
     }
 
     IEnumerator ShowFeedback()
@@ -268,7 +281,7 @@ public class TrialManagerP2T : MonoBehaviour
         {
             if (Input.GetMouseButtonDown(0))
             {
-                LogTTL("Clicked");
+                LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit))
                 {
@@ -297,23 +310,36 @@ public class TrialManagerP2T : MonoBehaviour
         }
     }
 
-    private void LogTTL(string label)
+    void OnDestroy()
+    {
+        if (CoinController.Instance != null)
+            CoinController.Instance.OnCoinBarFilled -= () => _audioSrc.PlayOneShot(_coinBarFullBeep);
+    }
+
+        
+    /// <summary>
+    /// Always write the event into ALL_LOGS, and if it has a TTL code, also fire TTL_LOGS.
+    /// </summary>
+    private void LogEvent(string label)
+    {
+
+        if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
         {
-            if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
-            {
-                // the -1 is to ensure it has the correct header
-                // we increment to break out of our old loops, but still need this to be labeled correctly
-                _currentIndex--;
-            }
-
-            LogManager.Instance.LogEvent(label, _trials[_currentIndex].TrialID);
-            if (TTLEventCodes.TryGetValue(label, out int code))
-                SerialTTLManager.Instance.LogEvent(label, code);
-
-            //If you want SerialTTLManager to also log all events, uncomment this below.
-            //else
-                //SerialTTLManager.Instance.LogEvent(label);
+            // the -1 is to ensure it has the correct header
+            // we increment to break out of our old loops, but still need this to be labeled correctly
+            _currentIndex--;
         }
+
+        string trialID = _trials[_currentIndex].TrialID;
+
+        // 1) Always log to ALL_LOGS
+        SessionLogManager.Instance.LogAll(trialID, label, "");
+
+        // 2) If it has a TTL code, log to TTL_LOGS
+        if (TTLEventCodes.TryGetValue(label, out int code))
+            SessionLogManager.Instance.LogTTL(trialID, label, code);
+    }
+
     private IEnumerator FlashFeedback(GameObject go, bool correct)
     {
         // grab all mesh renderers under the object
@@ -322,7 +348,7 @@ public class TrialManagerP2T : MonoBehaviour
         var originals = renderers.Select(r => r.material.color).ToArray();
         Color flashCol = correct ? Color.green : Color.red;
 
-        const int   flashes = 1;
+        const int flashes = 1;
         const float interval = 0.3f;  // quick
 
         for (int f = 0; f < flashes; f++)

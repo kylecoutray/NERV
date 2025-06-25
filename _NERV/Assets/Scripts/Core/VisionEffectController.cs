@@ -9,7 +9,7 @@ public class VisionEffectController : MonoBehaviour
     public Material liquidScannerMat;
 
     private enum VisionMode { Off, Terminal, Glitch, LiquidScanner }
-    private VisionMode currentMode = VisionMode.Terminal;
+    private VisionMode currentMode = VisionMode.Off;
 
     Vector3 originalCamPos;
 

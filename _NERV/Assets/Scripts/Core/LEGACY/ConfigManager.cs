@@ -20,7 +20,7 @@ public class ConfigManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            
             LoadStimIndex();
             LoadTrialDefs();
         }

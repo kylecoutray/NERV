@@ -32,7 +32,7 @@ public class CoinController : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(transform.root.gameObject);
+        
 
         // Auto‐find the real UI Canvas if needed
         if (CanvasRect == null || CanvasRect.GetComponent<Canvas>() == null)

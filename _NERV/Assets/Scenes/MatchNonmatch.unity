@@ -258,9 +258,9 @@ MonoBehaviour:
   IdleDuration: 1.75
   FixationDuration: 1.25
   CueOnDuration: 0.5
-  Delay1Duration: 0.25
+  Delay1Duration: 3
   SampleOnDuration: 0.5
-  Delay2Duration: 0.25
+  Delay2Duration: 0.5
   UseCoinFeedback: 1
   CoinsPerCorrect: 2
   ShowScoreUI: 1
@@ -270,6 +270,7 @@ MonoBehaviour:
   ChoiceY: 1.5
   FixationDotPrefab: {fileID: 5949558986845354578, guid: 5fcf1cf7f12ad41a88de04328b16aad7, type: 3}
   FixationDotSize: 0.2
+  UseFixationDot: 0
 --- !u!4 &619632014
 Transform:
   m_ObjectHideFlags: 0

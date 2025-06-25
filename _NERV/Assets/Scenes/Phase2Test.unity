@@ -452,6 +452,22 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7588981276843017476, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: LogManager
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7588981276843017476, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: SessionManager
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7588981276843017476, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: SerialTTLManager
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7588981276843017476, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: SessionLogManager
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: be657328d3d53400c803a38d106b9d45, type: 3}
 --- !u!114 &1960716623 stripped

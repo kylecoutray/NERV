@@ -117,24 +117,32 @@ public class GenericConfigManager : MonoBehaviour
             // dynamically read any <StateName>StimIndices, StimLocations, Duration
             foreach (var kv in colMap)
             {
-                string hdr = kv.Key;
-                int    c   = kv.Value;
-                string cell= cols[c].Trim();
+                string hdr  = kv.Key;
+                int    c    = kv.Value;
+                string cell = cols[c].Trim();
 
-                if (hdr.EndsWith("StimIndices", StringComparison.Ordinal))
+                try
                 {
-                    string state = hdr.Substring(0, hdr.Length - "StimIndices".Length);
-                    t.StimIndices[state] = ParseIntArray(cell);
+                    if (hdr.EndsWith("StimIndices", StringComparison.Ordinal))
+                    {
+                        string state = hdr.Substring(0, hdr.Length - "StimIndices".Length);
+                        t.StimIndices[state] = ParseIntArray(cell);
+                    }
+                    else if (hdr.EndsWith("StimLocations", StringComparison.Ordinal))
+                    {
+                        string state = hdr.Substring(0, hdr.Length - "StimLocations".Length);
+                        t.StimLocations[state] = ParseVector3Array(cell);
+                    }
+                    else if (hdr.EndsWith("Duration", StringComparison.Ordinal))
+                    {
+                        string state = hdr.Substring(0, hdr.Length - "Duration".Length);
+                        t.Durations[state] = float.Parse(cell);
+                    }
                 }
-                else if (hdr.EndsWith("StimLocations", StringComparison.Ordinal))
+                catch (FormatException ex)
                 {
-                    string state = hdr.Substring(0, hdr.Length - "StimLocations".Length);
-                    t.StimLocations[state] = ParseVector3Array(cell);
-                }
-                else if (hdr.EndsWith("Duration", StringComparison.Ordinal))
-                {
-                    string state = hdr.Substring(0, hdr.Length - "Duration".Length);
-                    t.Durations[state] = float.Parse(cell);
+                    Debug.LogError($"[GenericCFG] CSV parse error at row {r + 1}, column '{hdr}', value='{cell}': {ex.Message}");
+                    throw;
                 }
             }
 
@@ -178,6 +186,10 @@ public class GenericConfigManager : MonoBehaviour
     private Vector3[] ParseVector3Array(string s)
     {
         s = s.Trim();
+        // Empty or Blank
+        if (string.IsNullOrEmpty(s) || s == "[]")
+            return Array.Empty<Vector3>();
+
         // Single vector "[x,y,z]"?
         if (s.StartsWith("[") && s.EndsWith("]") && !s.Contains("],[") && !s.Contains("[["))
         {

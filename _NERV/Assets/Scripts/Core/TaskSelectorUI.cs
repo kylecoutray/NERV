@@ -110,6 +110,16 @@ public class TaskSelectorUI : MonoBehaviour
         StartSessionButton.onClick.AddListener(OnStartSessionClicked);
     }
 
+    void Update()
+    {
+        // if user presses the '0' key...
+        if (Input.GetKeyDown(KeyCode.Alpha0))
+        {
+            // start testing‐pulse coroutine. testing the communication.
+            StartCoroutine(SendTestingPulses());
+        }
+    }
+
     public void OnStartSessionClicked()
     {
 
@@ -138,10 +148,8 @@ public class TaskSelectorUI : MonoBehaviour
         // enable the grid
         TasksPanel.SetActive(true);
 
-        // send testing TTL pulses if not test mode
-        if (!SessionLogManager.Instance.testMode)
-            StartCoroutine(SendTestingPulses());
-
+        // send testing TTL pulses if not test mode, debug only if so.
+        StartCoroutine(SendTestingPulses());
 
     }
     public void ControlsUISetup()
@@ -262,12 +270,21 @@ public class TaskSelectorUI : MonoBehaviour
 
     private IEnumerator SendTestingPulses()
     {
-        Debug.Log("Sending test pulses to ensure proper serial port communication. Please check your hardware for 3 test pulses now.");
-        // send three 0xFF pulses, half a second apart
-        for (int i = 0; i < 3; i++)
+        if (!SessionLogManager.Instance.testMode)
         {
-            SessionLogManager.Instance.SendRawByte(0xFF);
-            yield return new WaitForSeconds(0.5f);
+            // When actually sending pulses (TEST MODE OFF)
+            Debug.Log("<color=yellow><b> TTL Test Mode OFF:</b> Sending 3 test pulses to verify serial-port communication. Check your hardware now.</color>");
+
+            // send three 0xFF pulses, half a second apart
+            for (int i = 0; i < 3; i++)
+            {
+                SessionLogManager.Instance.SendRawByte(0xFF);
+                yield return new WaitForSeconds(0.5f);
+            }
         }
+
+        else
+            Debug.Log("<color=yellow><b> TTL Test Mode ON:</b> Skipping real pulses—simulation only.</color>");
+            // When simulating only (TEST MODE ON)
     }
 }

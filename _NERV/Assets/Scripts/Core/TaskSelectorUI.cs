@@ -112,8 +112,8 @@ public class TaskSelectorUI : MonoBehaviour
 
     void Update()
     {
-        // if user presses the '0' key...
-        if (Input.GetKeyDown(KeyCode.Alpha0))
+        // if user presses the '`' key...
+        if (Input.GetKeyDown(KeyCode.BackQuote))
         {
             // start testing‐pulse coroutine. testing the communication.
             StartCoroutine(SendTestingPulses());

@@ -9,9 +9,6 @@ public class LoggingContainer : MonoBehaviour
 
     public SessionManager      SessionManager;
     public SessionLogManager   SessionLogManager;
-    public LogManager          LogManager;
-    public SerialTTLManager    SerialTTLManager;
-
     void Awake()
     {
         // 1) Singleton guard

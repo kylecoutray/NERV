@@ -324,7 +324,7 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine();
                 sb.AppendLine("            if (correct)");
                 sb.AppendLine("            {");
-                sb.AppendLine("                LogEvent(\"SelectingTarget\");");
+                sb.AppendLine("                LogEvent(\"TargetSelected\");");
                 sb.AppendLine("                _score += PointsPerCorrect;");
                 sb.AppendLine("                if (!CoinController.Instance.CoinBarWasJustFilled)");
                 sb.AppendLine("                    _audioSrc.PlayOneShot(_correctBeep);");
@@ -487,6 +487,9 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("        // 2) If it has a TTL code, log to TTL_LOGS");
         sb.AppendLine("        if (TTLEventCodes.TryGetValue(label, out int code))");
         sb.AppendLine("            SessionLogManager.Instance.LogTTL(trialID, label, code);");
+        sb.AppendLine();
+        sb.AppendLine("        // This is for ExtraFunctionality scripts");
+        sb.AppendLine("        BroadcastMessage(\"OnLogEvent\", label, SendMessageOptions.DontRequireReceiver);");
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    private IEnumerator FlashFeedback(GameObject go, bool correct)");

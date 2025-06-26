@@ -7,6 +7,9 @@ using System.Linq;
 using System.IO.Ports;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Rendering;
+using System.Threading.Tasks;
+
 
 public class SessionLogManager : MonoBehaviour
 {
@@ -28,8 +31,26 @@ public class SessionLogManager : MonoBehaviour
     [Tooltip("How many trials’ first‐pass of each state to capture")]
     public int trialsToCapture = 2;
 
+    [Tooltip("Frames to wait after render before capture")]
+    public int screenshotFrameDelay = 1;
+
+    [Header("Async Screenshot Settings")]
+    [Tooltip("Width/height for low-res capture")]
+    public int screenshotWidth = 256;
+    public int screenshotHeight = 144;
+
+    [Tooltip("Disable all async screenshots when false")]
+    public bool enableScreenshots = true;
+    [Range(10, 100), Tooltip("JPEG quality (10–100)")]
+    public int jpgQuality = 50;
+
+    // pooled buffers
+    private RenderTexture _screenshotRT;
+    private Texture2D _screenshotTex;
+
+
     // track how many times each state has appeared
-    private Dictionary<string,int> _stateCaptureCounts = new Dictionary<string,int>();
+    private Dictionary<string, int> _stateCaptureCounts = new Dictionary<string, int>();
 
 
     public void InitializeSerialPort()
@@ -98,12 +119,20 @@ public class SessionLogManager : MonoBehaviour
         taskFolder = Path.Combine(sess.SessionFolder, $"{acr}_{ts}");
         Directory.CreateDirectory(taskFolder);
 
+        if (enableScreenshots)
+        {
+            _screenshotRT = new RenderTexture(screenshotWidth, screenshotHeight, 0, RenderTextureFormat.ARGB32);
+            _screenshotRT.Create();
+            // match the 4-channel RT
+            _screenshotTex = new Texture2D(screenshotWidth, screenshotHeight, TextureFormat.RGBA32, false);
+        }
+
         // 1) HEADER file
         var configFields = tm.GetType()
-                             .GetFields(BindingFlags.Public | BindingFlags.Instance)
-                             .Where(f => f.FieldType == typeof(float)
-                                      || f.FieldType == typeof(int)
-                                      || f.FieldType == typeof(bool));
+                         .GetFields(BindingFlags.Public | BindingFlags.Instance)
+                         .Where(f => f.FieldType == typeof(float)
+                                  || f.FieldType == typeof(int)
+                                  || f.FieldType == typeof(bool));
         string headerPath = Path.Combine(taskFolder, "LOGS_HEADER.txt");
         using (var hw = new StreamWriter(headerPath, false))
         {
@@ -193,8 +222,8 @@ public class SessionLogManager : MonoBehaviour
         _stateCaptureCounts[evt] = seen;
 
         // capture only during the first N trials
-        if (seen <= trialsToCapture)
-            StartCoroutine(CaptureStateScreenshot(evt));
+        if (enableScreenshots && seen <= trialsToCapture)
+            StartCoroutine(CaptureStateScreenshotCoroutine(evt));
 
     }
 
@@ -279,29 +308,52 @@ public class SessionLogManager : MonoBehaviour
             Debug.LogWarning($"[SerialTTL] Raw send failed: port not open");
         }
     }
-    private IEnumerator CaptureStateScreenshot(string stateName)
+    private IEnumerator CaptureStateScreenshotCoroutine(string stateName)
     {
-        // wait until end of frame so the camera is fully rendered
+        // wait for the frame where everything (world + UI) is drawn
         yield return new WaitForEndOfFrame();
 
-        // read screen pixels
-        int w = Screen.width, h = Screen.height;
-        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
-        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-        tex.Apply();
+        // optional extra delays if your spawns happen one frame later
+        for (int i = 1; i < screenshotFrameDelay; i++)
+            yield return new WaitForEndOfFrame();
 
-        // encode & save into the same taskFolder
-        byte[] png = tex.EncodeToPNG();
-        Destroy(tex);
-        string fileName = $"{stateName}_{DateTime.Now:HHmmss}.png";
-        string statesFolder = Path.Combine(taskFolder, "StatesCaptured");
-        
-        // ensure it (and any missing parents) exist
-        Directory.CreateDirectory(statesFolder);
-        string fullPath = Path.Combine(statesFolder, fileName);
-        File.WriteAllBytes(fullPath, png);
+        // copy the full screen (including UI) into our RT
+        Graphics.Blit(null, _screenshotRT);
 
-        Debug.Log($"<color=yellow>[Screenshot]</color> Captured state “{stateName}” → {fullPath}");
+        // now do the async readback + encode + background write
+        AsyncGPUReadback.Request(_screenshotRT, 0, request =>
+        {
+            if (request.hasError) { Debug.LogWarning($"[Screenshot] GPU readback error for {stateName}"); return; }
+            _screenshotTex.LoadRawTextureData(request.GetData<byte>());
+            _screenshotTex.Apply(false, false);
+            FlipVertical(_screenshotTex);
+            byte[] jpg = _screenshotTex.EncodeToJPG(jpgQuality);
+            string folder = Path.Combine(taskFolder, "StatesCaptured");
+            Directory.CreateDirectory(folder);
+            string fileName = $"{stateName}_{DateTime.Now:HHmmss}.jpg";
+            string fullPath = Path.Combine(folder, fileName);
+            Task.Run(() => File.WriteAllBytes(fullPath, jpg));
+            Debug.Log($"<color=yellow>[Screenshot]</color> {stateName} → {fullPath}");
+        });
     }
+    void FlipVertical(Texture2D tex)
+    {
+        var pix = tex.GetPixels32();
+        int w = tex.width, h = tex.height;
+        for (int y = 0; y < h/2; y++)
+        {
+            int yOpp = h - 1 - y;
+            for (int x = 0; x < w; x++)
+            {
+                int i1 = y*w + x, i2 = yOpp*w + x;
+                var tmp = pix[i1];
+                pix[i1] = pix[i2];
+                pix[i2] = tmp;
+            }
+        }
+        tex.SetPixels32(pix);
+        tex.Apply(false, false);
+    }
+
 
 }

@@ -1,0 +1,7 @@
+Time,TrialID,Event,Details
+13:54:15.208,PRACTICE,StartEndBlock,
+13:54:15.214,PRACTICE,TrialOn,
+13:54:17.215,PRACTICE,SampleOn,
+13:54:17.719,PRACTICE,SampleOff,
+13:54:18.219,PRACTICE,DistractorOn,
+13:54:18.722,PRACTICE,DistractorOff,

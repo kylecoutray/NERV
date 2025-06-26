@@ -5,6 +5,8 @@ using System;
 using System.Reflection;
 using System.Linq;
 using System.IO.Ports;
+using System.Collections;
+using System.Collections.Generic;
 
 public class SessionLogManager : MonoBehaviour
 {
@@ -21,6 +23,14 @@ public class SessionLogManager : MonoBehaviour
     public int baudRate = 115200;
     public bool testMode = false;
     private SerialPort serialPort;
+
+    [Header("Screenshot Settings")]
+    [Tooltip("How many trials’ first‐pass of each state to capture")]
+    public int trialsToCapture = 2;
+
+    // track how many times each state has appeared
+    private Dictionary<string,int> _stateCaptureCounts = new Dictionary<string,int>();
+
 
     public void InitializeSerialPort()
     {
@@ -151,9 +161,12 @@ public class SessionLogManager : MonoBehaviour
             acr,
             $"{acr}_Stim_Index.csv"
         );
-        Copy(codeSrc,    Path.Combine(taskFolder, $"TrialManager{acr}_CODE.txt"));
-        Copy(defCsvSrc,  Path.Combine(taskFolder, $"{acr}_Trial_Def.csv"));
+        Copy(codeSrc, Path.Combine(taskFolder, $"TrialManager{acr}_CODE.txt"));
+        Copy(defCsvSrc, Path.Combine(taskFolder, $"{acr}_Trial_Def.csv"));
         Copy(stimCsvSrc, Path.Combine(taskFolder, $"{acr}_Stim_Index.csv"));
+
+        // clear old hash set for screenshots
+        _stateCaptureCounts.Clear();
     }
 
     void Copy(string src, string dst)
@@ -172,6 +185,17 @@ public class SessionLogManager : MonoBehaviour
         allWriter.WriteLine($"{time},{trialID},{evt},{details}");
         allWriter.Flush();
         Debug.Log($"[ALL_LOGS] {time}, {trialID}, {evt}, {details}");
+
+        // bump the seen‐count for this state
+        int seen = 0;
+        _stateCaptureCounts.TryGetValue(evt, out seen);
+        seen++;
+        _stateCaptureCounts[evt] = seen;
+
+        // capture only during the first N trials
+        if (seen <= trialsToCapture)
+            StartCoroutine(CaptureStateScreenshot(evt));
+
     }
 
     /// <summary>
@@ -226,7 +250,7 @@ public class SessionLogManager : MonoBehaviour
         if (serialPort != null && serialPort.IsOpen)
             serialPort.Close();
     }
-    
+
     /// <summary>
     /// Immediately write one raw byte out the COM port. Used for testing the connection.
     /// </summary>
@@ -255,4 +279,29 @@ public class SessionLogManager : MonoBehaviour
             Debug.LogWarning($"[SerialTTL] Raw send failed: port not open");
         }
     }
+    private IEnumerator CaptureStateScreenshot(string stateName)
+    {
+        // wait until end of frame so the camera is fully rendered
+        yield return new WaitForEndOfFrame();
+
+        // read screen pixels
+        int w = Screen.width, h = Screen.height;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+
+        // encode & save into the same taskFolder
+        byte[] png = tex.EncodeToPNG();
+        Destroy(tex);
+        string fileName = $"{stateName}_{DateTime.Now:HHmmss}.png";
+        string statesFolder = Path.Combine(taskFolder, "StatesCaptured");
+        
+        // ensure it (and any missing parents) exist
+        Directory.CreateDirectory(statesFolder);
+        string fullPath = Path.Combine(statesFolder, fileName);
+        File.WriteAllBytes(fullPath, png);
+
+        Debug.Log($"<color=yellow>[Screenshot]</color> Captured state “{stateName}” → {fullPath}");
+    }
+
 }

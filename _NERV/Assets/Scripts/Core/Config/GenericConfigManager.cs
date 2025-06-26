@@ -19,6 +19,11 @@ public class GenericConfigManager : MonoBehaviour
     [Tooltip("Leave blank to use current scene name")]
     public string Acronym;
 
+    [Header("Stimuli Settings")]
+    [Tooltip("Folder under Resources/ containing stimulus prefabs.")]
+    public string StimuliFolderName = "Stimuli";
+
+
     [HideInInspector]
     public List<TrialData> Trials = new List<TrialData>();
 
@@ -70,15 +75,24 @@ public class GenericConfigManager : MonoBehaviour
             new[] { "\r\n", "\n" },
             StringSplitOptions.RemoveEmptyEntries
         );
-        for (int i = 1; i < lines.Length; i++)
+
+        // check if first line is just a folder (no commas)
+        int mapStart = 1;
+        if (lines.Length > 0 && !lines[0].Contains(","))
         {
-            var parts = lines[i].Split(',');
-            if (parts.Length >= 2 &&
-                int.TryParse(parts[0].Trim(), out var idx))
-            {
-                StimIndexToFile[idx] = parts[1].Trim().Trim('"');
-            }
+            StimuliFolderName = lines[0].Trim();
+            mapStart = 2; // skip folder line + header row
         }
+
+        for (int i = mapStart; i < lines.Length; i++)
+            {
+                var parts = lines[i].Split(',');
+                if (parts.Length >= 2 &&
+                    int.TryParse(parts[0].Trim(), out var idx))
+                {
+                    StimIndexToFile[idx] = parts[1].Trim().Trim('"');
+                }
+            }
         Debug.Log($"[GenericCFG] Loaded {StimIndexToFile.Count} stimulus mappings");
     }
 

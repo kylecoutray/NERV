@@ -7,7 +7,7 @@ using System.Linq;
 public class StimIndexMappingWindow : EditorWindow
 {
     private string acr = "XYZ";
-    private string inputFolder = "Assets/Resources/Stimuli";
+    private string inputFolder = "Assets/Resources/Stimuli/Default";
     private string outputFolder = "Assets/Resources/Configs";
     private string outputFilename = "Stim_Index.csv";
 
@@ -69,7 +69,19 @@ public class StimIndexMappingWindow : EditorWindow
         string path = Path.Combine(outputFolder, $"{acr}_Stim_Index.csv");
         using (var writer = new StreamWriter(path, false))
         {
+
+            // 1) compute the subfolder under Resources (e.g. "Stimuli" or "Stimuli/MyCustom")
+            const string resourcesRoot = "Assets/Resources/";
+
+            string resPath = inputFolder.StartsWith(resourcesRoot)
+                ? inputFolder.Substring(resourcesRoot.Length).TrimEnd(Path.DirectorySeparatorChar)
+                : inputFolder;
+
+            // 2) write it as the first line (no commas so GenericConfigManager will pick it up)
+            writer.WriteLine(resPath);
+            // 3) then write your CSV header
             writer.WriteLine("StimIndex,FileName");
+
             for (int i = 0; i < fbxFiles.Length; i++)
                 writer.WriteLine($"{i},{fbxFiles[i]}");
         }

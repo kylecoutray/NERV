@@ -13,13 +13,22 @@ public class StimulusSpawner : MonoBehaviour
     void Awake()
     {
         _mainCamera = Camera.main ?? Camera.current;
-        // (same as before) load Resources/Stimuli into _prefabDict and set StimuliParent
-        
-        var prefabs = Resources.LoadAll<GameObject>(StimuliFolder);
+
+        // decide which Resources folder to load from
+        string folder = StimuliFolder;
+        if (GenericConfigManager.Instance != null 
+            && !string.IsNullOrEmpty(GenericConfigManager.Instance.StimuliFolderName))
+        {
+            folder = GenericConfigManager.Instance.StimuliFolderName;
+        }
+
+        // load all prefabs from Resources/{folder}
+        var prefabs = Resources.LoadAll<GameObject>(folder);
         _prefabDict = new Dictionary<string, GameObject>();
         foreach (var p in prefabs)
             _prefabDict[p.name] = p;
 
+        // ensure we have a parent container for spawned stimuli
         if (StimuliParent == null)
         {
             var t = transform.Find("StimuliRoot");
@@ -31,9 +40,10 @@ public class StimulusSpawner : MonoBehaviour
                 StimuliParent = go.transform;
             }
         }
-        Debug.Log($"[Spawner] Loaded {_prefabDict.Count} prefabs from Resources/Stimuli");
 
+        Debug.Log($"[Spawner] Loaded {_prefabDict.Count} prefabs from Resources/{folder}");
     }
+
 
     public List<GameObject> SpawnStimuli(int[] indices, Vector3[] locations)
     {

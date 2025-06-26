@@ -2,12 +2,13 @@ using UnityEngine;
 using System.IO;
 using System;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class SessionManager : MonoBehaviour
 {
     public static SessionManager Instance { get; private set; }
-    public string SessionName   { get; private set; }
-    public string SessionTs     { get; private set; }
+    public string SessionName { get; private set; }
+    public string SessionTs { get; private set; }
     public string SessionFolder { get; private set; }
 
     //track this so we can skip the session panel when returning
@@ -27,8 +28,9 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // auto‐init default if none yet (so you can hit Play on any scene), but don’t mark as "started"
-        if (string.IsNullOrEmpty(SessionName))
+        // auto-init default if none yet (so you can hit Play on any scene), but don’t mark as "started"
+        if (string.IsNullOrEmpty(SessionName) 
+            && SceneManager.GetActiveScene().name != "TaskSelector")
         {
             Initialize("Session");
             // reset started flag so TaskSelectorUI will show panel first
@@ -47,14 +49,30 @@ public class SessionManager : MonoBehaviour
             : sessionName.Trim();
         SessionTs = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
-        // MASTER_LOGS root just above Assets folder
-        string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-        string masterRoot  = Path.Combine(projectRoot, "MASTER_LOGS");
+        // figure out where "build root" is
+        string root;
+        #if UNITY_EDITOR
+            // Editor: project folder (one up from Assets/)
+            root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        #elif UNITY_STANDALONE_OSX
+            // macOS: Application.dataPath = .../MyGame.app/Contents
+            // so go up two to the folder containing MyGame.app
+            root = new DirectoryInfo(Application.dataPath)
+                        .Parent   // .../MyGame.app
+                        .Parent   // folder containing MyGame.app
+                        .FullName;
+        #else
+            // Windows & Linux: Application.dataPath = .../MyGame_Data
+            // so go up one to the folder containing MyGame.exe
+            root = Directory.GetParent(Application.dataPath).FullName;
+        #endif
+
+        // now create MASTER_LOGS there
+        string masterRoot = Path.Combine(root, "MASTER_LOGS");
         Directory.CreateDirectory(masterRoot);
 
-        // e.g. MASTER_LOGS/Session_20250623_153012
+        // then per-session folder
         SessionFolder = Path.Combine(masterRoot, $"{SessionName}_{SessionTs}");
         Directory.CreateDirectory(SessionFolder);
-
     }
 }

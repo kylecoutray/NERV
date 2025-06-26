@@ -102,9 +102,21 @@ public class SessionLogManager : MonoBehaviour
                 hw.WriteLine($"{f.Name}={f.GetValue(tm)}");
         }
 
-        // 2) open CSVs
-        allWriter = new StreamWriter(Path.Combine(taskFolder, "ALL_LOGS.csv"), false);
-        ttlWriter = new StreamWriter(Path.Combine(taskFolder, "TTL_LOGS.csv"), false);
+        // 2) open CSVs (allow file‐share so we don’t collide)
+        var allPath = Path.Combine(taskFolder, "ALL_LOGS.csv");
+        var ttlPath = Path.Combine(taskFolder, "TTL_LOGS.csv");
+        allWriter = new StreamWriter(new FileStream(
+            allPath,
+            FileMode.Create,          // overwrite or create
+            FileAccess.Write,
+            FileShare.ReadWrite       // allow sharing
+        ));
+        ttlWriter = new StreamWriter(new FileStream(
+            ttlPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.ReadWrite
+        ));
 
         // 3) write column headers
         allWriter.WriteLine("Time,TrialID,Event,Details");
@@ -112,13 +124,36 @@ public class SessionLogManager : MonoBehaviour
         allWriter.Flush();
         ttlWriter.Flush();
 
-        // 4) archive code + configs
-        Copy(Path.Combine(Application.dataPath, "Scripts", "Tasks", acr, $"TrialManager{acr}.cs"),
-             Path.Combine(taskFolder, $"TrialManager{acr}_CODE.txt"));
-        Copy(Path.Combine(Application.dataPath, "Resources", "Configs", acr, $"{acr}_Trial_Def.csv"),
-             Path.Combine(taskFolder, $"{acr}_Trial_Def.csv"));
-        Copy(Path.Combine(Application.dataPath, "Resources", "Configs", acr, $"{acr}_Stim_Index.csv"),
-             Path.Combine(taskFolder, $"{acr}_Stim_Index.csv"));
+        // Archive TrialManagers, as well as the .csv definitions. 
+        string sourceRoot = Application.isEditor
+            ? Application.dataPath                           // “…/YourProject/Assets”
+            : Application.streamingAssetsPath;               // “…/MyGame_Data/StreamingAssets”
+
+        // 1) TrialManager code
+        string codeSrc = Path.Combine(
+            sourceRoot,
+            "Scripts", "Tasks", acr,
+            $"TrialManager{acr}.cs"
+        );
+
+        // 2) Trial‐Def CSV
+        string defCsvSrc = Path.Combine(
+            sourceRoot,
+            Application.isEditor ? "Resources/Configs" : "Configs",
+            acr,
+            $"{acr}_Trial_Def.csv"
+        );
+
+        // 3) Stim-Index CSV
+        string stimCsvSrc = Path.Combine(
+            sourceRoot,
+            Application.isEditor ? "Resources/Configs" : "Configs",
+            acr,
+            $"{acr}_Stim_Index.csv"
+        );
+        Copy(codeSrc,    Path.Combine(taskFolder, $"TrialManager{acr}_CODE.txt"));
+        Copy(defCsvSrc,  Path.Combine(taskFolder, $"{acr}_Trial_Def.csv"));
+        Copy(stimCsvSrc, Path.Combine(taskFolder, $"{acr}_Stim_Index.csv"));
     }
 
     void Copy(string src, string dst)

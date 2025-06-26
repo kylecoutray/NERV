@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4839479941281304448}
   - component: {fileID: 3294279720707060016}
   m_Layer: 0
-  m_Name: FixationPoint
+  m_Name: FixationDot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

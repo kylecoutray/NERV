@@ -9,12 +9,18 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
 using System.Threading.Tasks;
+using System.Diagnostics;
+
+using Debug = UnityEngine.Debug;
+
 
 
 public class SessionLogManager : MonoBehaviour
 {
     public static SessionLogManager Instance { get; private set; }
 
+    // start a global stopwatch at launch
+    private static readonly Stopwatch sw = Stopwatch.StartNew();
     StreamWriter allWriter;
     StreamWriter ttlWriter;
     string taskFolder;
@@ -158,8 +164,9 @@ public class SessionLogManager : MonoBehaviour
         ));
 
         // 3) write column headers
-        allWriter.WriteLine("Time,TrialID,Event,Details");
-        ttlWriter.WriteLine("Time,TrialID,Event,Code");
+        allWriter.WriteLine("Frame,UnityTime,StopwatchTime,TrialID,Event,Details");
+        ttlWriter.WriteLine("Frame,UnityTime,StopwatchTime,TrialID,Event,Code");
+
         allWriter.Flush();
         ttlWriter.Flush();
 
@@ -210,10 +217,22 @@ public class SessionLogManager : MonoBehaviour
     public void LogAll(string trialID, string evt, string details)
     {
         if (allWriter == null) return;
-        string time = DateTime.Now.ToString("HH:mm:ss.fff");
-        allWriter.WriteLine($"{time},{trialID},{evt},{details}");
+
+        int frame = UnityEngine.Time.frameCount;
+        float unityTime = UnityEngine.Time.realtimeSinceStartup;
+        double stopwatchTime = sw.Elapsed.TotalSeconds;
+
+        // CSV: Frame, UnityTime(s), StopwatchTime(s), TrialID, Event, Details
+        allWriter.WriteLine(
+            $"{frame},{unityTime:F4},{stopwatchTime:F6}," +
+            $"{trialID},{evt},{details}"
+        );
         allWriter.Flush();
-        Debug.Log($"[ALL_LOGS] {time}, {trialID}, {evt}, {details}");
+
+        Debug.Log(
+            $"[ALL_LOGS] Frame: {frame}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
+            $"TrialID: {trialID}, Event: {evt}, {details}"
+        );
 
         // bump the seen‐count for this state
         int seen = 0;
@@ -233,7 +252,11 @@ public class SessionLogManager : MonoBehaviour
     public void LogTTL(string trialID, string evt, int ttlCode)
     {
         if (ttlWriter == null) return;
-        string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+        
+        int frame = UnityEngine.Time.frameCount;
+        float unityTime = UnityEngine.Time.realtimeSinceStartup;
+        double stopwatchTime = sw.Elapsed.TotalSeconds;
+
         string status, byteSent = "NoByte";
 
         if (ttlCode >= 1 && ttlCode <= 8)
@@ -261,16 +284,26 @@ public class SessionLogManager : MonoBehaviour
         {
             status = "LOG_ONLY";
         }
-
-        // write TTL CSV
-        ttlWriter.WriteLine($"{timestamp},{trialID},{evt},{ttlCode}");
+        
+       // write TTL CSV: Frame, UnityTime, StopwatchTime, TrialID, Event, Code
+        ttlWriter.WriteLine(
+            $"{frame},{unityTime:F4},{stopwatchTime:F6}," +
+            $"{trialID},{evt},{ttlCode}"
+        );
         ttlWriter.Flush();
 
+        Debug.Log(
+            $"[TTL] Frame: {frame}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
+            $"Status: {status}, Event: {evt}, Code: {ttlCode}, Byte: {byteSent}"
+        );
+
         // console feedback
-        string line = $"{timestamp},{status},{evt},{byteSent}";
+        string line = $"[TTL] Frame: {frame}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
+            $"{status}, Event: {evt}, Code: {ttlCode}, Byte: {byteSent}";
         if (status == "FAILED") Debug.LogWarning($"[TTL] {line}");
         else Debug.Log($"[TTL] {line}");
     }
+
 
     void OnApplicationQuit()
     {
@@ -330,7 +363,7 @@ public class SessionLogManager : MonoBehaviour
             byte[] jpg = _screenshotTex.EncodeToJPG(jpgQuality);
             string folder = Path.Combine(taskFolder, "StatesCaptured");
             Directory.CreateDirectory(folder);
-            string fileName = $"{stateName}_{DateTime.Now:HHmmss}.jpg";
+            string fileName = $"{DateTime.Now:HHmmss}_{stateName}.jpg";
             string fullPath = Path.Combine(folder, fileName);
             Task.Run(() => File.WriteAllBytes(fullPath, jpg));
             Debug.Log($"<color=yellow>[Screenshot]</color> {stateName} → {fullPath}");

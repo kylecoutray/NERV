@@ -472,6 +472,9 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("    }");
         sb.AppendLine("    private void LogEvent(string label)");
         sb.AppendLine("    {");
+        sb.AppendLine("        // This is for ExtraFunctionality scripts");
+        sb.AppendLine("        BroadcastMessage(\"OnLogEvent\", label, SendMessageOptions.DontRequireReceiver);");
+        sb.AppendLine();
         sb.AppendLine("        if (_currentIndex >= _trials.Count) // This is for post RunTrials Log Calls. ");
         sb.AppendLine("        {");
         sb.AppendLine("            // The -1 is to ensure it has the correct header");
@@ -488,8 +491,6 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("        if (TTLEventCodes.TryGetValue(label, out int code))");
         sb.AppendLine("            SessionLogManager.Instance.LogTTL(trialID, label, code);");
         sb.AppendLine();
-        sb.AppendLine("        // This is for ExtraFunctionality scripts");
-        sb.AppendLine("        BroadcastMessage(\"OnLogEvent\", label, SendMessageOptions.DontRequireReceiver);");
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    private IEnumerator FlashFeedback(GameObject go, bool correct)");

@@ -76,11 +76,6 @@ public class StimulusSpawner : MonoBehaviour
 
                 }
 
-                // attach a CircleHalo and assign the prefab (optional! I decided to omit this from the TrialManager though. -K )
-                // if you want to add halo support, ask me, it's super easy! -kyle the developer
-                var haloHelper = go.GetComponent<CircleHalo>() 
-               ?? go.AddComponent<CircleHalo>();
-
 
 
                 // Tag it with its index

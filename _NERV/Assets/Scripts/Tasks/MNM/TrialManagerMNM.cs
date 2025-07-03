@@ -394,6 +394,8 @@ public class TrialManagerMNM : MonoBehaviour
 
     private void LogEvent(string label)
     {
+        BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
+        
         if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
         {
             // the -1 is to ensure it has the correct header
@@ -409,8 +411,6 @@ public class TrialManagerMNM : MonoBehaviour
         // 2) If it has a TTL code, log to TTL_LOGS
         if (TTLEventCodes.TryGetValue(label, out int code))
             SessionLogManager.Instance.LogTTL(trialID, label, code);
-
-        BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
 
     }
     //////////////

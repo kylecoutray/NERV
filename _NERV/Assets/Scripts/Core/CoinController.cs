@@ -104,7 +104,7 @@ public class CoinController : MonoBehaviour
             Destroy(go);
 
             // 5) Fill that slot
-            _slots[_coinsAccumulated].color = Color.green;
+            _slots[_coinsAccumulated].color = Color.white; // make it white
             _coinsAccumulated++;
         }
 
@@ -161,10 +161,9 @@ public class CoinController : MonoBehaviour
 
             // flash it on/off
             Color orig = img.color;
-            Color off   = new Color(orig.r, orig.g, orig.b, 0f);
             for (int f = 0; f < PunishmentFlashes; f++)
             {
-                img.color = off;
+                img.color = Color.red; // flash red
                 yield return new WaitForSeconds(PunishmentFlashDur);
                 img.color = orig;
                 yield return new WaitForSeconds(PunishmentFlashDur);

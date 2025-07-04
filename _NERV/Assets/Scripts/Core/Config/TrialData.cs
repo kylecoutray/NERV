@@ -14,7 +14,6 @@ public class TrialData
     // Any number of states → int[] or Vector3[] or float
     public Dictionary<string,int[]>    StimIndices    = new Dictionary<string,int[]>();
     public Dictionary<string,Vector3[]> StimLocations = new Dictionary<string,Vector3[]>();
-    public Dictionary<string,float>     Durations      = new Dictionary<string,float>();
 
     // Helpers for easy access:
     public int[]    GetStimIndices(string state)
@@ -23,6 +22,4 @@ public class TrialData
     public Vector3[] GetStimLocations(string state)
         => StimLocations.TryGetValue(state, out var v) ? v : Array.Empty<Vector3>();
 
-    public float    GetDuration(string state)
-        => Durations.TryGetValue(state, out var d) ? d : 0f;
 }

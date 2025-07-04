@@ -260,6 +260,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("            var trial = _trials[_currentIndex];");
         sb.AppendLine("            var spawnedItems = new List<GameObject>();");
         sb.AppendLine("            int[] lastIdxs = new int[0];");
+        sb.AppendLine("            int[] cueIdxs = new int[0]; // Used for \"correct\" logic");
         sb.AppendLine();
 
         int stimCount = 1;
@@ -274,6 +275,7 @@ public class TaskGeneratorWindow : EditorWindow
             if (st.IsStimulus)
             {
                 sb.AppendLine($"            var idxs{stimCount} = trial.GetStimIndices(\"{st.Name}\");");
+                sb.AppendLine($"            cueIdxs = idxs{stimCount}; // Store for correct logic");
                 sb.AppendLine($"            var locs{stimCount} = trial.GetStimLocations(\"{st.Name}\");");
                 sb.AppendLine($"            if (idxs{stimCount}.Length > 0 && locs{stimCount}.Length > 0)");
                 sb.AppendLine("            {");
@@ -317,7 +319,7 @@ public class TaskGeneratorWindow : EditorWindow
             {
                 sb.AppendLine();
                 sb.AppendLine("            // — Feedback and Beep —");
-                sb.AppendLine($"            bool correct = answered && (pickedIdx == (lastIdxs.Length > 0 ? lastIdxs[0] : -1));");
+                sb.AppendLine($"            bool correct = answered && cueIdxs.Contains(pickedIdx);");
                 sb.AppendLine("            //Flash Feedback");
                 sb.AppendLine("            if (targetGO != null)");
                 sb.AppendLine("                StartCoroutine(FlashFeedback(targetGO, correct));");
@@ -353,7 +355,7 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine();
                 sb.AppendLine("            UpdateScoreUI();");
                 sb.AppendLine("            if (ShowFeedbackUI) FeedbackText.canvasRenderer.SetAlpha(1f);");
-                sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(FeedbackDuration);");
+                sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(FeedbackDuration));");
                 sb.AppendLine();
 
             }
@@ -361,7 +363,7 @@ public class TaskGeneratorWindow : EditorWindow
             // Delay
             if (st.IsDelay)
             {
-                sb.AppendLine($"            yield return StartCoroutine(WaitInterruptable({st.Name}Duration);");
+                sb.AppendLine($"            yield return StartCoroutine(WaitInterruptable({st.Name}Duration));");
                 sb.AppendLine();
             }
         }
@@ -406,7 +408,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("    IEnumerator ShowFeedback()");
         sb.AppendLine("    {");
         sb.AppendLine("        FeedbackText.canvasRenderer.SetAlpha(1f);");
-        sb.AppendLine("        yield return StartCoroutine(WaitInterruptable(FeedbackDuration);");
+        sb.AppendLine("        yield return StartCoroutine(WaitInterruptable(FeedbackDuration));");
         sb.AppendLine("        if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -509,12 +511,12 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("            // Set to flash color");
         sb.AppendLine("            for (int i = 0; i < renderers.Length; i++)");
         sb.AppendLine("                renderers[i].material.color = flashCol;");
-        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(interval);");
+        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(interval));");
         sb.AppendLine(); 
         sb.AppendLine("            // Revert to original");
         sb.AppendLine("            for (int i = 0; i < renderers.Length; i++)");
         sb.AppendLine("                renderers[i].material.color = originals[i];");
-        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(interval);");
+        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(interval));");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("    // Added this to allow pause scene functionality");

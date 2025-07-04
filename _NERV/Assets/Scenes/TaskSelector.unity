@@ -2482,7 +2482,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -33.3, y: 33.300003}
+  m_AnchoredPosition: {x: -33.30005, y: 33.299988}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1095313956
@@ -3373,7 +3373,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 33.3, y: 33.3}
+  m_AnchoredPosition: {x: 33.30005, y: 33.299988}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1686117306
@@ -3836,6 +3836,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 614927039810980229, guid: 04fd200b26e9c4d4e809163f39a8fac9, type: 3}
       propertyPath: testMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 614927039810980229, guid: 04fd200b26e9c4d4e809163f39a8fac9, type: 3}
+      propertyPath: trialsToCapture
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 614927039810980346, guid: 04fd200b26e9c4d4e809163f39a8fac9, type: 3}

@@ -7,7 +7,7 @@ using System.Linq;
 
 /// <summary>
 /// Parses two CSVs:
-///  - TrialDefFile: rows of TrialID,BlockCount,<StateName>StimIndices,<StateName>StimLocations,<StateName>Duration,...
+///  - TrialDefFile: rows of TrialID,BlockCount,<StateName>StimIndices,<StateName>StimLocations,...
 ///  - StimIndexFile (asset.text): rows of Index,PrefabName
 /// Exposes both in-memory for TrialManager<TTK> and StimulusSpawner.
 /// </summary>
@@ -128,7 +128,7 @@ public class GenericConfigManager : MonoBehaviour
                 BlockCount = int.Parse(cols[colMap["BlockCount"]].Trim())
             };
 
-            // dynamically read any <StateName>StimIndices, StimLocations, Duration
+            // dynamically read any <StateName>StimIndices or <StateName>StimLocations
             foreach (var kv in colMap)
             {
                 string hdr  = kv.Key;
@@ -146,11 +146,6 @@ public class GenericConfigManager : MonoBehaviour
                     {
                         string state = hdr.Substring(0, hdr.Length - "StimLocations".Length);
                         t.StimLocations[state] = ParseVector3Array(cell);
-                    }
-                    else if (hdr.EndsWith("Duration", StringComparison.Ordinal))
-                    {
-                        string state = hdr.Substring(0, hdr.Length - "Duration".Length);
-                        t.Durations[state] = float.Parse(cell);
                     }
                 }
                 catch (FormatException ex)

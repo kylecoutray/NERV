@@ -147,6 +147,10 @@ PrefabInstance:
       value: 320
       objectReference: {fileID: 0}
     - target: {fileID: 1512313122534238413, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: trialsToCapture
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1512313122534238413, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: screenshotHeight
       value: 180
       objectReference: {fileID: 0}

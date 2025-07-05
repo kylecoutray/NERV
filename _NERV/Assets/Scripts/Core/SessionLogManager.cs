@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.IO;
 using System;
+using System.Security.Cryptography;
 using System.Reflection;
 using System.Linq;
 using System.IO.Ports;
@@ -58,6 +59,11 @@ public class SessionLogManager : MonoBehaviour
     // track how many times each state has appeared
     private Dictionary<string, int> _stateCaptureCounts = new Dictionary<string, int>();
 
+    // —————————————————————————————————————————————
+    // Session-manifest state
+    private long _sessionStartEpoch;
+    private string _sessionStartHuman;
+    private bool _manifestWritten = false;
 
     public void InitializeSerialPort()
     {
@@ -82,6 +88,13 @@ public class SessionLogManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // record session start
+        _sessionStartEpoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        _sessionStartHuman = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+
+        DontDestroyOnLoad(gameObject);
+        SceneManager.sceneLoaded += OnSceneLoaded;
 
         // Wait for any trial scene to load
         SceneManager.sceneLoaded += OnSceneLoaded;
@@ -119,6 +132,9 @@ public class SessionLogManager : MonoBehaviour
             enabled = false;
             return;
         }
+
+        // emit MANIFEST.json in your session root
+        WriteManifest(sess.SessionFolder);
 
         // make per-task folder
         string ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -201,6 +217,39 @@ public class SessionLogManager : MonoBehaviour
         Copy(defCsvSrc, Path.Combine(taskFolder, $"{acr}_Trial_Def.csv"));
         Copy(stimCsvSrc, Path.Combine(taskFolder, $"{acr}_Stim_Index.csv"));
 
+        // ---- append file hashes to manifest ----
+        var manifestPath = Path.Combine(sess.SessionFolder, "MANIFEST.json");
+        if (File.Exists(manifestPath))
+        {
+            // read and deserialize
+            string j = File.ReadAllText(manifestPath);
+            var manifest = JsonUtility.FromJson<SessionManifest>(j);
+
+            // list of the just-copied files
+            var files = new string[]
+            {
+                Path.Combine(taskFolder, $"TrialManager{acr}_CODE.txt"),
+                Path.Combine(taskFolder, $"{acr}_Trial_Def.csv"),
+                Path.Combine(taskFolder, $"{acr}_Stim_Index.csv")
+            };
+
+            foreach (var f in files)
+            {
+                if (File.Exists(f))
+                {
+                    manifest.fileHashes.Add(new FileHash
+                    {
+                        fileName = Path.GetFileName(f),
+                        hash     = ComputeSHA256(f)
+                    });
+                }
+            }
+
+            // write back updated manifest
+            File.WriteAllText(manifestPath, JsonUtility.ToJson(manifest, true));
+        }
+
+
         // clear old hash set for screenshots
         _stateCaptureCounts.Clear();
     }
@@ -252,7 +301,7 @@ public class SessionLogManager : MonoBehaviour
     public void LogTTL(string trialID, string evt, int ttlCode)
     {
         if (ttlWriter == null) return;
-        
+
         int frame = UnityEngine.Time.frameCount;
         float unityTime = UnityEngine.Time.realtimeSinceStartup;
         double stopwatchTime = sw.Elapsed.TotalSeconds;
@@ -284,8 +333,8 @@ public class SessionLogManager : MonoBehaviour
         {
             status = "LOG_ONLY";
         }
-        
-       // write TTL CSV: Frame, UnityTime, StopwatchTime, TrialID, Event, Code
+
+        // write TTL CSV: Frame, UnityTime, StopwatchTime, TrialID, Event, Code
         ttlWriter.WriteLine(
             $"{frame},{unityTime:F4},{stopwatchTime:F6}," +
             $"{trialID},{evt},{ttlCode}"
@@ -373,12 +422,12 @@ public class SessionLogManager : MonoBehaviour
     {
         var pix = tex.GetPixels32();
         int w = tex.width, h = tex.height;
-        for (int y = 0; y < h/2; y++)
+        for (int y = 0; y < h / 2; y++)
         {
             int yOpp = h - 1 - y;
             for (int x = 0; x < w; x++)
             {
-                int i1 = y*w + x, i2 = yOpp*w + x;
+                int i1 = y * w + x, i2 = yOpp * w + x;
                 var tmp = pix[i1];
                 pix[i1] = pix[i2];
                 pix[i2] = tmp;
@@ -386,6 +435,67 @@ public class SessionLogManager : MonoBehaviour
         }
         tex.SetPixels32(pix);
         tex.Apply(false, false);
+    }
+    [Serializable]
+    private class SessionManifest
+    {
+        public long startEpoch;
+        public string startTime;
+        public string sessionName;
+        public string os;
+        public string gpu;
+        public string unityVersion;
+        public int displayRefresh;
+        public int targetFrameRate;
+        public string gitCommit;
+        public List<FileHash> fileHashes = new List<FileHash>();
+        
+    }
+
+    private void WriteManifest(string sessionFolder)
+    {
+        if (_manifestWritten) return;
+
+        string gitHash = Resources.Load<TextAsset>("git_commit")?.text ?? "unknown";
+        
+
+
+        var m = new SessionManifest()
+        {
+            startEpoch = _sessionStartEpoch,
+            startTime = _sessionStartHuman,
+            sessionName = SessionManager.Instance.SessionName,
+            os = SystemInfo.operatingSystem,
+            gpu = SystemInfo.graphicsDeviceName,
+            unityVersion = Application.unityVersion,
+            displayRefresh = Screen.currentResolution.refreshRate,
+            targetFrameRate = Application.targetFrameRate,
+            gitCommit = gitHash
+            
+        };
+
+        string json = JsonUtility.ToJson(m, true);
+        File.WriteAllText(Path.Combine(sessionFolder, "MANIFEST.json"), json);
+        _manifestWritten = true;
+    }
+
+    [Serializable]
+    private class FileHash
+    {
+        public string fileName;
+        public string hash;
+    }
+
+    string ComputeSHA256(string filePath)
+    {
+        using (var sha = SHA256.Create())
+        {
+            byte[] bytes = File.ReadAllBytes(filePath);
+            byte[] hash  = sha.ComputeHash(bytes);
+            return BitConverter.ToString(hash)
+                            .Replace("-", "")
+                            .ToLowerInvariant();
+        }
     }
 
 

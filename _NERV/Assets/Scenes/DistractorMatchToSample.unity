@@ -346,7 +346,12 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 6050858157675719066, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 5211587737115673436, guid: be657328d3d53400c803a38d106b9d45, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: be657328d3d53400c803a38d106b9d45, type: 3}
 --- !u!114 &1745196422 stripped
 MonoBehaviour:
@@ -370,8 +375,8 @@ GameObject:
   - component: {fileID: 1817687551}
   - component: {fileID: 1817687550}
   - component: {fileID: 1817687549}
-  - component: {fileID: 1817687552}
   - component: {fileID: 1817687553}
+  - component: {fileID: 1817687552}
   m_Layer: 0
   m_Name: TrialManagerDMS
   m_TagString: Untagged
@@ -523,14 +528,15 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1817687548}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5209b13bf42084886a354f282b2ed456, type: 3}
+  m_Script: {fileID: 11500000, guid: c2aa27ea9f89b4419b45b0129c1a4513, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  statesToFlash:
-  - SampleOn
-  flashDuration: 0.05
+  statesToSpawn: []
+  fixationDotPrefab: {fileID: 0}
+  dotSize: 0.2
+  fixationDuration: 1.5
 --- !u!114 &1817687553
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -538,9 +544,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1817687548}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 493a7c31dbbcf40508ce46c6e4f712c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   dwellTime: 0.5
+  simulateWithMouse: 1
+  showGazeCursor: 1
+  gazeCursor: {fileID: 0}

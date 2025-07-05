@@ -71,12 +71,6 @@ public class TrialManagerMNM : MonoBehaviour
     public float ChoiceY = 1.5f;   // vertical offset for match (non-match is -ChoiceY)
 
 
-    [Header("Fixation Dot")]
-    public GameObject FixationDotPrefab;    // drag your Prefab here
-    public float FixationDotSize = 0.2f; // world‐units diameter
-    public bool UseFixationDot = false;
-
-
     private Dictionary<string, int> TTLEventCodes = new Dictionary<string, int>
     {
         { "Fixation", 1 },
@@ -159,31 +153,6 @@ public class TrialManagerMNM : MonoBehaviour
             // — FIXATION —
             LogEvent("Fixation");
             yield return StartCoroutine(WaitInterruptable(FixationDuration));
-            
-            /////////////////////////////////
-            // custom code for this MNM game:
-            // 1) spawn & size
-            if (UseFixationDot == true)
-            {
-                GameObject fixDot = null;
-                if (FixationDotPrefab != null)
-                {
-                    fixDot = Instantiate(
-                        FixationDotPrefab,
-                        Vector3.zero,                    // world‐center
-                        Quaternion.identity,
-                        this.transform                   // parent under your manager for cleanliness
-                    );
-                    fixDot.transform.localScale = Vector3.one * FixationDotSize;
-                }
-
-                // 2) wait out
-                yield return StartCoroutine(WaitInterruptable(FixationDuration));
-
-                // 3) cleanup
-                if (fixDot != null)
-                    Destroy(fixDot);
-            }
 
 
             // — CUEON —
@@ -390,7 +359,7 @@ public class TrialManagerMNM : MonoBehaviour
             }
             _inPause = false;
  
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
                 LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
@@ -425,6 +394,8 @@ public class TrialManagerMNM : MonoBehaviour
 
     private void LogEvent(string label)
     {
+        BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
+        
         if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
         {
             // the -1 is to ensure it has the correct header
@@ -440,6 +411,7 @@ public class TrialManagerMNM : MonoBehaviour
         // 2) If it has a TTL code, log to TTL_LOGS
         if (TTLEventCodes.TryGetValue(label, out int code))
             SessionLogManager.Instance.LogTTL(trialID, label, code);
+
     }
     //////////////
     /// Custom FlashFeedback to account for match/nonmatch sprite colors

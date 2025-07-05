@@ -371,6 +371,7 @@ GameObject:
   - component: {fileID: 1817687550}
   - component: {fileID: 1817687549}
   - component: {fileID: 1817687552}
+  - component: {fileID: 1817687553}
   m_Layer: 0
   m_Name: TrialManagerDMS
   m_TagString: Untagged
@@ -522,7 +523,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1817687548}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5209b13bf42084886a354f282b2ed456, type: 3}
   m_Name: 
@@ -530,3 +531,16 @@ MonoBehaviour:
   statesToFlash:
   - SampleOn
   flashDuration: 0.05
+--- !u!114 &1817687553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1817687548}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 493a7c31dbbcf40508ce46c6e4f712c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dwellTime: 0.5

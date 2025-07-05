@@ -5,6 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
+using UnityEngine.SceneManagement;
+
+
+using static SessionManager;
+
 
 public class CalibrationManager : MonoBehaviour
 {
@@ -16,6 +21,7 @@ public class CalibrationManager : MonoBehaviour
 
     [Header("Simulation")]
     public bool simulateDAQ = true;
+    public bool simulateByCursor = false; // Use cursor position for simulated voltages
     public float simMinVoltage = -5f;
     public float simMaxVoltage = 5f;
 
@@ -44,13 +50,13 @@ public class CalibrationManager : MonoBehaviour
             NativeDAQmx.DAQmxStopTask(task);
             NativeDAQmx.DAQmxClearTask(task);
             task = IntPtr.Zero;
-            Debug.Log("Cleared previous DAQ task.");
+            Debug.Log("[!] Cleared previous DAQ task.");
         }
 
 
         if (calibrationPoints == null || calibrationPoints.Count == 0)
         {
-            Debug.LogError("No calibration points assigned!");
+            Debug.LogError("[!] No calibration points assigned!");
             return;
         }
         // Compute extents for simulation mapping
@@ -62,7 +68,7 @@ public class CalibrationManager : MonoBehaviour
         if (!simulateDAQ)
             SetupTasks();
         else
-            Debug.Log("Simulation mode ON: no hardware tasks started.");
+            Debug.Log("[!] Simulation mode ON: no hardware tasks started.");
 
         StartCoroutine(RunCalibration());
     }
@@ -85,8 +91,22 @@ public class CalibrationManager : MonoBehaviour
     {
         if (simulateDAQ)
         {
+            if (simulateByCursor)
+            {
+                // use raw mouse position as our "voltage" reading
+                Vector3 mp = Input.mousePosition;
+
+                // map screen coords into your voltage range
+                float vx = Mathf.Lerp(simMinVoltage, simMaxVoltage, mp.x / Screen.width);
+                float vy = Mathf.Lerp(simMinVoltage, simMaxVoltage, mp.y / Screen.height);
+                return new Vector2(vx, vy);
+            }
+
+
             float mid = (simMinVoltage + simMaxVoltage) * 0.5f;
             return new Vector2(mid, mid);
+                
+
         }
         double[] data = new double[2];
         int sampsRead;
@@ -106,7 +126,7 @@ public class CalibrationManager : MonoBehaviour
 
     void SetupTasks()
     {
-        Debug.Log($"Initializing DAQ task on device {deviceName}");
+        Debug.Log($"[!]Initializing DAQ task on device {deviceName}");
 
         // 1) Create a single task
         int err = NativeDAQmx.DAQmxCreateTask(string.Empty, out task);
@@ -170,12 +190,12 @@ public class CalibrationManager : MonoBehaviour
                 if (holdTimer < holdDuration)
                 {
                     attempt++;
-                    Debug.LogWarning($"Dot {i}: fixation not stable after {elapsed:F1}s, retrying ({attempt}/{maxRetries})");
+                    Debug.LogWarning($"[!] Dot {i}: fixation not stable after {elapsed:F1}s, retrying ({attempt}/{maxRetries})");
                     pt.gameObject.SetActive(false);
                     yield return new WaitForSeconds(0.2f);
                     continue;
                 }
-                Debug.Log($"Dot {i}: fixation confirmed after {elapsed:F1}s");
+                Debug.Log($"[!] Dot {i}: fixation confirmed after {elapsed:F1}s");
 
                 // Voltage sampling
                 var vxSamples = new List<float>();
@@ -190,7 +210,7 @@ public class CalibrationManager : MonoBehaviour
                 float meanVy = vySamples.Average();
                 float stdSVx = ComputeStd(vxSamples);
                 float stdSVy = ComputeStd(vySamples);
-                Debug.Log($"Point {i}, attempt {attempt+1}: mean=({meanVx:F3},{meanVy:F3}), std=({stdSVx:F3},{stdSVy:F3})");
+                Debug.Log($"[!] Point {i}, attempt {attempt + 1}: mean=({meanVx:F3},{meanVy:F3}), std=({stdSVx:F3},{stdSVy:F3})");
 
                 if (stdSVx <= maxStdDev && stdSVy <= maxStdDev)
                 {
@@ -200,14 +220,14 @@ public class CalibrationManager : MonoBehaviour
                 else
                 {
                     attempt++;
-                    Debug.LogWarning($"Dot {i}: high variance, retrying ({attempt}/{maxRetries})");
+                    Debug.LogWarning($"[!] Dot {i}: high variance, retrying ({attempt}/{maxRetries})");
                 }
             }
 
             pt.gameObject.SetActive(false);
             if (!success)
             {
-                Debug.LogError($"Calibration failed at point {i}.");
+                Debug.LogError($"[!] Calibration failed at point {i}.");
                 yield break;
             }
             yield return new WaitForSeconds(0.2f);
@@ -215,7 +235,16 @@ public class CalibrationManager : MonoBehaviour
 
         if (!simulateDAQ)
             CleanupTasks();
+
         SaveMapping();
+
+        Debug.Log("[!] Calibration completed successfully.");
+        Debug.Log($"[!] Ending Scene.");
+        SceneManager.LoadScene("TestCalibration");
+
+
+
+
     }
 
     private float ComputeStd(IEnumerable<float> data)
@@ -240,9 +269,17 @@ public class CalibrationManager : MonoBehaviour
             screenPoints = calibrationPoints.ConvertAll(r => r.anchoredPosition),
             voltagePoints = eyeVoltages
         };
-        string path = Path.Combine(Application.persistentDataPath, "calib.json");
+        // write to Assets/Resources/Calibrations
+        string folder = Path.Combine(Application.dataPath, "Resources", "Calibrations");
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
+
+        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        string session = SessionManager.Instance.SessionName;
+        string fileName = $"{timestamp}_{session}_config.json";
+        string path = Path.Combine(folder, fileName);
         File.WriteAllText(path, JsonUtility.ToJson(map, true));
-        Debug.Log($"Calibration saved → {path}");
+        Debug.Log($"[!] Calibration saved → {path}");
     }
 
     void OnDisable()
@@ -252,7 +289,7 @@ public class CalibrationManager : MonoBehaviour
             NativeDAQmx.DAQmxStopTask(task);
             NativeDAQmx.DAQmxClearTask(task);
             task = IntPtr.Zero;
-            Debug.Log("DAQ task stopped on disable.");
+            Debug.Log("[!]DAQ task stopped on disable.");
         }
     }
 
@@ -266,7 +303,7 @@ public class CalibrationManager : MonoBehaviour
     void CheckError(int code, string ctx)
     {
         if (code != 0)
-            Debug.LogError($"NI-DAQmx Error [{ctx}]: {code}");
+            Debug.LogError($"[!] NI-DAQmx Error [{ctx}]: {code}");
     }
 
     [Serializable]

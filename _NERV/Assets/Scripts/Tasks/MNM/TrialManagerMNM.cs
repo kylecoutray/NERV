@@ -359,7 +359,7 @@ public class TrialManagerMNM : MonoBehaviour
             }
             _inPause = false;
  
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
                 LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);

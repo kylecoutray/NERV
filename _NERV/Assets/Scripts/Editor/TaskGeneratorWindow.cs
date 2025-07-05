@@ -433,7 +433,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("            }");
         sb.AppendLine("            _inPause = false;");
         sb.AppendLine();
-        sb.AppendLine("            if (Input.GetMouseButtonDown(0))");
+        sb.AppendLine("            if (Input.GetMouseButtonDown(0)) || DwellClick.ClickDownThisFrame");
         sb.AppendLine("            {");
         sb.AppendLine("                LogEvent(\"Clicked\");");
         sb.AppendLine("                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);");

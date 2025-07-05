@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Linq;
 
 public class CalibrationTester : MonoBehaviour
 {
@@ -22,15 +23,24 @@ public class CalibrationTester : MonoBehaviour
 
     void Start()
     {
-        // --- 1) Load calibration map ---
-        string path = Path.Combine(Application.persistentDataPath, "calib.json");
-        if (!File.Exists(path))
+        // --- 1) Load most recent calibration config ---
+        string folder = Path.Combine(Application.dataPath, "Resources", "Calibrations");
+        if (!Directory.Exists(folder))
         {
-            Debug.LogError($"Calibration file not found at {path}");
-            enabled = false;
-            return;
+            Debug.LogError($"Calibration folder not found at {folder}");
+            enabled = false; return;
         }
-        var map = JsonUtility.FromJson<CalibrationMap>(File.ReadAllText(path));
+        var files = Directory.GetFiles(folder, "*_config.json");
+        if (files.Length == 0)
+        {
+            Debug.LogError("No calibration configs found in Resources/Calibrations");
+            enabled = false; return;
+        }
+        // pick the newest by write time
+        string latest = files
+            .OrderByDescending(f => File.GetLastWriteTime(f))
+            .First();
+        var map = JsonUtility.FromJson<CalibrationMap>(File.ReadAllText(latest));
 
         // --- 2) Compute affine fit: screen = a*volt + b ---
         int n = map.voltagePoints.Length;
@@ -97,7 +107,7 @@ public class CalibrationTester : MonoBehaviour
         // --- 5) Map voltages → screen and move cursor ---
         float px = aX * vx + bX;
         float py = aY * vy + bY;
-        testCursor.anchoredPosition = new Vector2(px, py);
+        testCursor.anchoredPosition = new Vector2(-px, -py); // Voltage mapping is inverted
     }
 
     void OnDestroy()

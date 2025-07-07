@@ -10,16 +10,16 @@ EditorBuildSettings:
     guid: d751228924a604724b4b5aaaf2ac8629
   - enabled: 0
     path: 
-    guid: af50006b3c6a14262922c665ccd6c042
+    guid: 00000000000000000000000000000000
   - enabled: 0
     path: 
-    guid: 1ab92669795a3471984cffc5a5bc87e9
+    guid: 00000000000000000000000000000000
   - enabled: 1
     path: Assets/Scenes/MatchNonmatch.unity
     guid: 26900fbb62e0d4bb68e87fb7580f64c2
   - enabled: 0
     path: 
-    guid: bb246e91ac2a24204b6b5a745fe253ce
+    guid: 00000000000000000000000000000000
   - enabled: 1
     path: Assets/Scenes/DistractorMatchToSample.unity
     guid: db9af5544c08a44fbaff855fa472d889
@@ -29,4 +29,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TestCalibration.unity
     guid: 53ccdd618b51af443bc048cf00606731
+  - enabled: 1
+    path: Assets/Scenes/TESTING.unity
+    guid: c0daef7f5b7b6415bbf0fd4ae9ab4ab0
   m_configObjects: {}

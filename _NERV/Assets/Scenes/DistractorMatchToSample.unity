@@ -374,6 +374,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1817687551}
   - component: {fileID: 1817687550}
+  - component: {fileID: 1817687554}
   - component: {fileID: 1817687549}
   - component: {fileID: 1817687553}
   - component: {fileID: 1817687552}
@@ -494,11 +495,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Deps: {fileID: 1745196422}
   PauseBetweenBlocks: 1
-  MaxChoiceResponseTime: 10
+  MaxChoiceResponseTime: 0.5
   FeedbackDuration: 1
   PointsPerCorrect: 2
   PointsPerWrong: -1
-  TrialOnDuration: 2
+  TrialOnDuration: 1
   SampleOnDuration: 0.5
   SampleOffDuration: 0.5
   DistractorOnDuration: 0.5
@@ -544,7 +545,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1817687548}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 493a7c31dbbcf40508ce46c6e4f712c5, type: 3}
   m_Name: 
@@ -553,3 +554,20 @@ MonoBehaviour:
   simulateWithMouse: 1
   showGazeCursor: 1
   gazeCursor: {fileID: 0}
+--- !u!114 &1817687554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1817687548}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5209b13bf42084886a354f282b2ed456, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  statesToFlash:
+  - SampleOn
+  - DistractorOn
+  - TargetOn
+  flashDuration: 0.05

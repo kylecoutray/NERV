@@ -17,7 +17,7 @@ public class SessionManager : MonoBehaviour
     /// The list of task acronyms the user selected at session start.
     /// Persisted across scene changes so toggles stay remembered.
     /// </summary>
-    public int frameRate;
+    private int frameRate;
     public List<string> SelectedTasks { get; private set; } = new List<string>();
 
     void Awake()
@@ -30,10 +30,9 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
+        frameRate = Screen.currentResolution.refreshRate; ; // get the current screen refresh rate
         QualitySettings.vSyncCount = 0;           // disable V-Sync
-        Application.targetFrameRate = Screen.currentResolution.refreshRate;        // or your display’s Hz
-
-        frameRate = Application.targetFrameRate;
+        Application.targetFrameRate = frameRate;        // set target FPS to 60 for consistency
 
         // auto-init default if none yet (so you can hit Play on any scene), but don’t mark as "started"
         if (string.IsNullOrEmpty(SessionName)

@@ -65,6 +65,11 @@ public class SessionLogManager : MonoBehaviour
     private string _sessionStartHuman;
     private bool _manifestWritten = false;
 
+    // holds the active TrialManager instance and its acronym
+    private object _currentTrialManager = null;
+    private string _currentTaskAcronym  = null;
+
+
     public void InitializeSerialPort()
     {
         if (!testMode)
@@ -81,23 +86,29 @@ public class SessionLogManager : MonoBehaviour
     void Awake()
     {
         // Singleton guard
+
         if (Instance != null)
         {
+            Debug.Log($"[SessionLogManager] Destroying duplicate from scene {gameObject.scene.name}");
             Destroy(gameObject);
             return;
         }
+        Debug.Log($"[SessionLogManager] Initialized and persisting from scene {gameObject.scene.name}");
+
+
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
+        if (transform.parent != null) transform.SetParent(null);
+            DontDestroyOnLoad(gameObject);
 
         // record session start
         _sessionStartEpoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         _sessionStartHuman = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
 
-        DontDestroyOnLoad(gameObject);
-        SceneManager.sceneLoaded += OnSceneLoaded;
 
         // Wait for any trial scene to load
         SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -240,7 +251,7 @@ public class SessionLogManager : MonoBehaviour
                     manifest.fileHashes.Add(new FileHash
                     {
                         fileName = Path.GetFileName(f),
-                        hash     = ComputeSHA256(f)
+                        hash = ComputeSHA256(f)
                     });
                 }
             }
@@ -449,7 +460,7 @@ public class SessionLogManager : MonoBehaviour
         public int targetFrameRate;
         public string gitCommit;
         public List<FileHash> fileHashes = new List<FileHash>();
-        
+
     }
 
     private void WriteManifest(string sessionFolder)
@@ -457,7 +468,7 @@ public class SessionLogManager : MonoBehaviour
         if (_manifestWritten) return;
 
         string gitHash = Resources.Load<TextAsset>("git_commit")?.text ?? "unknown";
-        
+
 
 
         var m = new SessionManifest()
@@ -471,7 +482,7 @@ public class SessionLogManager : MonoBehaviour
             displayRefresh = Screen.currentResolution.refreshRate,
             targetFrameRate = Application.targetFrameRate,
             gitCommit = gitHash
-            
+
         };
 
         string json = JsonUtility.ToJson(m, true);
@@ -491,12 +502,115 @@ public class SessionLogManager : MonoBehaviour
         using (var sha = SHA256.Create())
         {
             byte[] bytes = File.ReadAllBytes(filePath);
-            byte[] hash  = sha.ComputeHash(bytes);
+            byte[] hash = sha.ComputeHash(bytes);
             return BitConverter.ToString(hash)
                             .Replace("-", "")
                             .ToLowerInvariant();
         }
     }
 
+    [Serializable]
+    public class TaskSummary
+    {
+        public int TrialsTotal;
+        public float Accuracy;
+        public float MeanRT_ms;
+    }
+    [Serializable]
+    public class TrialDetail
+    {
+        public int   TrialIndex;
+        public bool  Correct;
+        public float ReactionTimeMs;
+    }
+
+    /// <summary>
+    /// Writes a per‐task SUMMARY.json  SUMMARY.csv in the task folder,
+    /// then appends one row to _NERV/MASTER_LOGS/SESSION_SUMMARY.csv.
+    /// </summary>
+    public void WriteTaskSummary(string taskAcronym, TaskSummary summary, List<TrialDetail> trialDetails)
+    {
+        Debug.Log("Writing task summary");
+        // --- 1) SUMMARY.csv in this task folder ---
+        string csvPath = Path.Combine(taskFolder, "SUMMARY.csv");
+        bool isNew = !File.Exists(csvPath);
+        using (var w = new StreamWriter(csvPath, false))
+        {
+            // — overall summary —
+            w.WriteLine("TrialsTotal,Accuracy,MeanRT_ms");
+            w.WriteLine($"{summary.TrialsTotal},{summary.Accuracy},{summary.MeanRT_ms}");
+            w.WriteLine(); // blank line
+
+            // — trial‐level details —
+            w.WriteLine("TrialIndex,Correct,ReactionTimeMs");
+            foreach (var d in trialDetails)
+                w.WriteLine($"{d.TrialIndex},{d.Correct},{d.ReactionTimeMs}");
+        }
+
+        // --- 2) Append to lab-wide Session_SUMMARY.csv ---
+        Debug.Log("Writing session summary");
+        string sessionFolder = SessionManager.Instance.SessionFolder
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string parentDir = Path.GetDirectoryName(sessionFolder);
+        Directory.CreateDirectory(parentDir);
+        string masterPath = Path.Combine(parentDir, "_MASTER_SUMMARY.csv");
+        bool masterNew = !File.Exists(masterPath);
+        using (var mw = new StreamWriter(masterPath, true))
+        {
+            if (masterNew)
+                mw.WriteLine("Session,Task,TrialsTotal,Accuracy,MeanRT_ms,Timestamp");
+
+            // derive session folder name, e.g. "20250705_153012"
+            string sessionName = Path.GetFileName(
+                SessionManager.Instance.SessionFolder.TrimEnd(Path.DirectorySeparatorChar)
+            );
+            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+            mw.WriteLine(
+                $"{sessionName},{taskAcronym}," +
+                $"{summary.TrialsTotal},{summary.Accuracy}," +
+                $"{summary.MeanRT_ms}," +
+                $"{timestamp}"
+            );
+        }
+
+        Debug.Log($"[SessionLogManager] Wrote SUMMARY for {taskAcronym}: " +
+                  $"{summary.TrialsTotal} trials, {summary.Accuracy:P1} accuracy, " +
+                  $"{summary.MeanRT_ms:F1}ms RT");
+    }
+
+    private void OnSceneUnloaded(Scene scene)
+    {
+        if (_currentTrialManager == null) return;
+
+        var tmType = _currentTrialManager.GetType();
+
+        // 1) get the summary
+        var miSum = tmType.GetMethod("GetTaskSummary",
+                    BindingFlags.Public | BindingFlags.Instance);
+        var summary = (TaskSummary)miSum.Invoke(_currentTrialManager, null);
+
+        // 2) get the per-trial list
+        var miDet = tmType.GetMethod("GetTaskDetails",
+                    BindingFlags.Public | BindingFlags.Instance);
+        var details = (List<TrialDetail>)miDet.Invoke(_currentTrialManager, null);
+
+        // 3) write both
+        WriteTaskSummary(_currentTaskAcronym, summary, details);
+
+        // clear for the next scene
+        _currentTrialManager = null;
+        _currentTaskAcronym  = null;
+    }
+
+    
+    /// <summary>
+    /// TrialManager calls this in Awake to register itself & its acronym.
+    /// </summary>
+    public void RegisterTrialManager(object manager, string acronym)
+    {
+        _currentTrialManager = manager;
+        _currentTaskAcronym = acronym;
+    }
 
 }

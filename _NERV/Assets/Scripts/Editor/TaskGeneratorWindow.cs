@@ -247,7 +247,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("        if (PauseController != null && _trials?.Count > 0)");
         sb.AppendLine("        {");
         sb.AppendLine("            yield return StartCoroutine(");
-        sb.AppendLine("                _trials[0].TrialID == \"PRACTICE\"");
+        sb.AppendLine("                _trials[0].BlockCount == 0");
         sb.AppendLine("                    ? PauseController.ShowPause(\"PRACTICE\") // Displays practice if we set up practice sessions. (By making TrialID PRACTICE)");
         sb.AppendLine("                    : PauseController.ShowPause(lastBlock, _totalBlocks)");
         sb.AppendLine("                );");

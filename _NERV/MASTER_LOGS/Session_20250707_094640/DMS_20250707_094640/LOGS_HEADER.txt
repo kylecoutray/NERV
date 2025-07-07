@@ -1,6 +1,6 @@
 # Run parameters for TrialManagerDMS
 PauseBetweenBlocks=True
-MaxChoiceResponseTime=10
+MaxChoiceResponseTime=0.5
 FeedbackDuration=1
 PointsPerCorrect=2
 PointsPerWrong=-1

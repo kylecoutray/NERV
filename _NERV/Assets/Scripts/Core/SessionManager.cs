@@ -30,7 +30,7 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        frameRate = Screen.currentResolution.refreshRate; ; // get the current screen refresh rate
+        frameRate = 60; //Screen.currentResolution.refreshRate; ; // get the current screen refresh rate
         QualitySettings.vSyncCount = 0;           // disable V-Sync
         Application.targetFrameRate = frameRate;        // set target FPS to 60 for consistency
 

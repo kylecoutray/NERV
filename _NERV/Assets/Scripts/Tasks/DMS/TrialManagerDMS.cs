@@ -150,7 +150,7 @@ public class TrialManagerDMS : MonoBehaviour
             LogEvent("TrialOn");
             yield return StartCoroutine(WaitInterruptable(TrialOnDuration));
             // — SAMPLEON —
-            LogEvent("SampleOn");
+            LogEventNextFrame("SampleOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs1 = trial.GetStimIndices("SampleOn");
             cueIdxs = idxs1; // Store for correct logic
@@ -171,7 +171,7 @@ public class TrialManagerDMS : MonoBehaviour
 
             yield return StartCoroutine(WaitInterruptable(SampleOffDuration));
             // — DISTRACTORON —
-            LogEvent("DistractorOn");
+            LogEventNextFrame("DistractorOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs2 = trial.GetStimIndices("DistractorOn");
             var locs2 = trial.GetStimLocations("DistractorOn");
@@ -190,7 +190,7 @@ public class TrialManagerDMS : MonoBehaviour
 
             yield return StartCoroutine(WaitInterruptable(DistractorOffDuration));
             // — TARGETON —
-            LogEvent("TargetOn");
+            LogEventNextFrame("TargetOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs3 = trial.GetStimIndices("TargetOn");
             var locs3 = trial.GetStimLocations("TargetOn");
@@ -393,6 +393,35 @@ public class TrialManagerDMS : MonoBehaviour
 
 
     }
+    private void LogEventNextFrame(string label)
+    {
+        StartCoroutine(LogEventNextFrameCoroutine(label));
+    }
+
+    private IEnumerator LogEventNextFrameCoroutine(string label)
+    {
+        // This is for ExtraFunctionality scripts
+        BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
+
+        yield return null; // Wait a frame to accurately log stimuli events
+        if (_currentIndex >= _trials.Count) // This is for post RunTrials Log Calls. 
+        {
+            // The -1 is to ensure it has the correct header
+            // We increment to break out of our old loops, but still need this to be labeled correctly
+            _currentIndex--;
+        }
+
+        string trialID = _trials[_currentIndex].TrialID;
+
+        // 1) Always log to ALL_LOGS
+        SessionLogManager.Instance.LogAll(trialID, label, "");
+
+        // 2) If it has a TTL code, log to TTL_LOGS
+        if (TTLEventCodes.TryGetValue(label, out int code))
+            SessionLogManager.Instance.LogTTL(trialID, label, code);
+
+    }
+
 
     private IEnumerator FlashFeedback(GameObject go, bool correct)
     {

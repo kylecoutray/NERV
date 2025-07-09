@@ -495,11 +495,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Deps: {fileID: 1745196422}
   PauseBetweenBlocks: 1
-  MaxChoiceResponseTime: 0.5
+  MaxChoiceResponseTime: 10
   FeedbackDuration: 1
   PointsPerCorrect: 2
   PointsPerWrong: -1
-  TrialOnDuration: 1
+  TrialOnDuration: 2
   SampleOnDuration: 0.5
   SampleOffDuration: 0.5
   DistractorOnDuration: 0.5

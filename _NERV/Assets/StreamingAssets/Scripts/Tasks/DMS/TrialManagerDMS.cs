@@ -61,10 +61,25 @@ public class TrialManagerDMS : MonoBehaviour
     public bool ShowScoreUI = true;
     public bool ShowFeedbackUI = true;
 
-    // Pause Handling
+    // Pause Handling variables
     private bool _pauseRequested = false;
     private bool _inPause = false;
 
+    // Trial Summary Variables
+    private struct TrialResult
+    {
+        public bool isCorrect;
+        public float ReactionTimeMs;
+        public int DroppedFrames;
+    }
+    private List<TrialResult> _trialResults = new List<TrialResult>();
+    private float _trialStartTime;
+    private int _trialStartFrame;
+
+    private string _taskAcronym;
+    private int _trialsCompleted = 0;
+
+    // Dictionary for TTL event codes
     private Dictionary<string, int> TTLEventCodes = new Dictionary<string, int>
     {
         { "TrialOn", 1 },
@@ -77,7 +92,7 @@ public class TrialManagerDMS : MonoBehaviour
         { "StartEndBlock", 8 }
     };
 
-    void Start()
+    void Start() // Setting everything up for our main loop
     {
         //Force the GenericConfigManager into existence
         if (GenericConfigManager.Instance == null)
@@ -85,7 +100,7 @@ public class TrialManagerDMS : MonoBehaviour
             new GameObject("GenericConfigManager")
                 .AddComponent<GenericConfigManager>();
         }
-        
+
         // Auto-grab everything from the one DependenciesContainer in the scene
         if (Deps == null)
             Deps = FindObjectOfType<DependenciesContainer>();
@@ -101,46 +116,57 @@ public class TrialManagerDMS : MonoBehaviour
 
         _trials = GenericConfigManager.Instance.Trials;
         _currentIndex = 0;
+        _taskAcronym = GetType().Name.Replace("TrialManager", "");
 
-        // replace hard-coded TotalBlocks inspector value
+        // hand yourself off to SessionLogManager
+        SessionLogManager.Instance.RegisterTrialManager(this, _taskAcronym);
+
+        // replace hard-coded TotalBlocks inspector value (if there is one)
         _totalBlocks = (_trials.Count > 0) ? _trials[_trials.Count - 1].BlockCount : 1;
 
-
+        // UI Loads
         UpdateScoreUI();
         _audioSrc = GetComponent<AudioSource>();
         _correctBeep = Resources.Load<AudioClip>("AudioClips/positiveBeep");
         _errorBeep = Resources.Load<AudioClip>("AudioClips/negativeBeep");
         _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/completeBar");
 
+        // CoinController setup
         if (CoinUI != null) CoinUI.SetActive(UseCoinFeedback);
         if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
         if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
         CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);
 
 
-        StartCoroutine(RunTrials());
+        StartCoroutine(WarmUpAndThenRun()); // Preloads all stimuli first, then starts the RunTrials() loop
     }
 
     IEnumerator RunTrials()
     {
+        // Check current trial block count (for pause handling)
         int lastBlock = _trials[0].BlockCount;
 
-        //Start with paused first scene    
+        // Start with paused scene first    
         if (PauseController != null && _trials?.Count > 0)
         {
             yield return StartCoroutine(
                 _trials[0].TrialID == "PRACTICE"
-                    ? PauseController.ShowPause("PRACTICE") // displays practice if we set up practice sessions.
+                    ? PauseController.ShowPause("PRACTICE") // displays "practice" if we set up practice trials.
                     : PauseController.ShowPause(lastBlock, _totalBlocks)
             );
         }
-
-
-
+        // Log the start of our testing block
         LogEvent("StartEndBlock");
 
         while (_currentIndex < _trials.Count)
         {
+            // start global trial timer
+            float t0 = Time.realtimeSinceStartup;
+            _trialStartTime = Time.time;
+            _trialStartFrame = Time.frameCount;
+            _trialsCompleted++;
+
+            // Begin the main loop for running trials
             var trial = _trials[_currentIndex];
             var spawnedItems = new List<GameObject>();
             int[] lastIdxs = new int[0];
@@ -150,7 +176,7 @@ public class TrialManagerDMS : MonoBehaviour
             LogEvent("TrialOn");
             yield return StartCoroutine(WaitInterruptable(TrialOnDuration));
             // — SAMPLEON —
-            LogEvent("SampleOn");
+            LogEventNextFrame("SampleOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs1 = trial.GetStimIndices("SampleOn");
             cueIdxs = idxs1; // Store for correct logic
@@ -164,6 +190,7 @@ public class TrialManagerDMS : MonoBehaviour
             }
 
             yield return StartCoroutine(WaitInterruptable(SampleOnDuration));
+
             // — SAMPLEOFF —
             LogEvent("SampleOff");
             //   the stuff below is because of the IsClearAll checkmark
@@ -171,7 +198,7 @@ public class TrialManagerDMS : MonoBehaviour
 
             yield return StartCoroutine(WaitInterruptable(SampleOffDuration));
             // — DISTRACTORON —
-            LogEvent("DistractorOn");
+            LogEventNextFrame("DistractorOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs2 = trial.GetStimIndices("DistractorOn");
             var locs2 = trial.GetStimLocations("DistractorOn");
@@ -183,14 +210,16 @@ public class TrialManagerDMS : MonoBehaviour
             }
 
             yield return StartCoroutine(WaitInterruptable(DistractorOnDuration));
+
             // — DISTRACTOROFF —
             LogEvent("DistractorOff");
             //   the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
             yield return StartCoroutine(WaitInterruptable(DistractorOffDuration));
+
             // — TARGETON —
-            LogEvent("TargetOn");
+            LogEventNextFrame("TargetOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
             var idxs3 = trial.GetStimIndices("TargetOn");
             var locs3 = trial.GetStimLocations("TargetOn");
@@ -201,7 +230,6 @@ public class TrialManagerDMS : MonoBehaviour
                 lastIdxs = idxs3;
             }
 
-            yield return null;
             // — CHOICE —
             LogEvent("Choice");
             bool answered = false;
@@ -219,6 +247,7 @@ public class TrialManagerDMS : MonoBehaviour
             GameObject targetGO = spawnedItems.Find(go => go.GetComponent<StimulusID>().Index == pickedIdx);
 
             yield return null;
+
             // — FEEDBACK —
             LogEvent("Feedback");
 
@@ -262,9 +291,12 @@ public class TrialManagerDMS : MonoBehaviour
             if (ShowFeedbackUI) FeedbackText.canvasRenderer.SetAlpha(1f);
             yield return StartCoroutine(WaitInterruptable(FeedbackDuration));
 
-            yield return null;
+            // end global trial timer
+            float t1 = Time.realtimeSinceStartup;
+
             // — RESET —
             LogEvent("Reset");
+
             //   the stuff below is because of the IsClearAll checkmark
             Spawner.ClearAll();
 
@@ -276,6 +308,16 @@ public class TrialManagerDMS : MonoBehaviour
             int thisBlock = trial.BlockCount;
             int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;
 
+            // SUMMARY Handling
+            float rtMs = reactionT * 1000f;  // reactionT is seconds → ms
+
+            float duration = t1 - t0;
+
+            _trialResults.Add(new TrialResult
+            {
+                isCorrect = correct,
+                ReactionTimeMs = rtMs,
+            });
 
             //Only run when enabled
             if (PauseBetweenBlocks && nextBlock != thisBlock && nextBlock != -1)
@@ -298,10 +340,35 @@ public class TrialManagerDMS : MonoBehaviour
         _currentIndex--;
         LogEvent("StartEndBlock");
         LogEvent("AllTrialsComplete");
+
         if (PauseController != null)
             yield return StartCoroutine(PauseController.ShowPause(-1, _totalBlocks));// the -1 is to send it to end game state
     }
 
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
+        {
+            ShowScoreUI = !ShowScoreUI;
+            ShowFeedbackUI = !ShowFeedbackUI;
+            if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+            if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+        }
+
+        if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
+            _pauseRequested = true;
+    }
+
+    void OnDestroy() // Cleanup event listeners
+    {
+        if (CoinController.Instance != null)
+            CoinController.Instance.OnCoinBarFilled -= () => _audioSrc.PlayOneShot(_coinBarFullBeep);
+    }
+
+    // ========= Helper Functions (customizable utilities) =========
+    // These functions are separated out for clarity and included for Task customizability.
+    #region Helper Functions    
+    
     IEnumerator ShowFeedback()
     {
         FeedbackText.canvasRenderer.SetAlpha(1f);
@@ -314,7 +381,6 @@ public class TrialManagerDMS : MonoBehaviour
         if (ShowScoreUI && ScoreText != null) ScoreText.text = $"Score: {_score}";
         else if (ScoreText != null) ScoreText.text = "";
     }
-
     private IEnumerator WaitForChoice(System.Action<int, float> callback)
     {
         float startTime = Time.time;
@@ -350,30 +416,11 @@ public class TrialManagerDMS : MonoBehaviour
         callback(-1, MaxChoiceResponseTime);
     }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            ShowScoreUI = !ShowScoreUI;
-            ShowFeedbackUI = !ShowFeedbackUI;
-            if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
-            if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
-        }
-
-        if (Input.GetKeyDown(KeyCode.P) && _inPause == false)
-            _pauseRequested = true;
-    }
-
-    void OnDestroy()
-    {
-        if (CoinController.Instance != null)
-            CoinController.Instance.OnCoinBarFilled -= () => _audioSrc.PlayOneShot(_coinBarFullBeep);
-    }
     private void LogEvent(string label)
     {
         // This is for ExtraFunctionality scripts
         BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
-        
+
         if (_currentIndex >= _trials.Count) //this is for post RunTrials Log Calls. 
         {
             // the -1 is to ensure it has the correct header
@@ -393,6 +440,35 @@ public class TrialManagerDMS : MonoBehaviour
 
 
     }
+    private void LogEventNextFrame(string label)
+    {
+        StartCoroutine(LogEventNextFrameCoroutine(label));
+    }
+
+    private IEnumerator LogEventNextFrameCoroutine(string label)
+    {
+        // This is for ExtraFunctionality scripts
+        BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
+
+        yield return null; // Wait a frame to accurately log stimuli events
+        if (_currentIndex >= _trials.Count) // This is for post RunTrials Log Calls. 
+        {
+            // The -1 is to ensure it has the correct header
+            // We increment to break out of our old loops, but still need this to be labeled correctly
+            _currentIndex--;
+        }
+
+        string trialID = _trials[_currentIndex].TrialID;
+
+        // 1) Always log to ALL_LOGS
+        SessionLogManager.Instance.LogAll(trialID, label, "");
+
+        // 2) If it has a TTL code, log to TTL_LOGS
+        if (TTLEventCodes.TryGetValue(label, out int code))
+            SessionLogManager.Instance.LogTTL(trialID, label, code);
+
+    }
+
 
     private IEnumerator FlashFeedback(GameObject go, bool correct)
     {
@@ -422,6 +498,7 @@ public class TrialManagerDMS : MonoBehaviour
     // added this to allow pause scene functionality
     private IEnumerator WaitInterruptable(float duration)
     {
+        yield return null; // wait a frame to display stimuli accurately
         float t0 = Time.time;
         while (Time.time - t0 < duration)
         {
@@ -431,12 +508,77 @@ public class TrialManagerDMS : MonoBehaviour
                 _inPause = true;
                 _pauseRequested = false;
                 yield return StartCoroutine(PauseController.ShowPause("PAUSED"));
-                
+
             }
             _inPause = false;
             yield return null;  // next frame
         }
     }
+
+    /// <summary>
+    /// Called reflectively by SessionLogManager when leaving this scene.
+    /// </summary>
+    public SessionLogManager.TaskSummary GetTaskSummary()
+    {
+        int total = _trialResults.Count;
+        int corrects = _trialResults.Count(r => r.isCorrect);
+        float meanRt = _trialResults.Average(r => r.ReactionTimeMs);
+
+        return new SessionLogManager.TaskSummary
+        {
+            TrialsTotal = total,
+            Accuracy = (float)corrects / total,
+            MeanRT_ms = meanRt
+        };
+
+    }
+
+    /// <summary>
+    /// Called by SessionLogManager to pull every trial’s metrics.
+    /// </summary>
+    public List<SessionLogManager.TrialDetail> GetTaskDetails()
+    {
+        return _trialResults
+            .Select((r, i) => new SessionLogManager.TrialDetail
+            {
+                TrialIndex = i + 1,
+                Correct = r.isCorrect,
+                ReactionTimeMs = r.ReactionTimeMs,
+            })
+            .ToList();
+    }
+
+    IEnumerator WarmUp()
+    {
+        var prefabDict = GenericConfigManager.Instance.StimIndexToFile;
+        var usedIndices = prefabDict.Keys.ToList();  // All stimulus indices used in this session
+
+        var locs = Enumerable.Range(0, usedIndices.Count)
+                            .Select(i => new Vector3(i * 1000f, 1000f, 0)) // Place far offscreen
+                            .ToArray();
+
+        // Spawn all stimuli
+        var goList = Spawner.SpawnStimuli(usedIndices.ToArray(), locs);
+
+        // Wait for Unity to register them
+        yield return new WaitForEndOfFrame();
+        yield return null;
+        yield return new WaitForEndOfFrame();
+
+        // Trigger photodiode flash to warm up UI and rendering
+        BroadcastMessage("OnLogEvent", "WarmupFlash", SendMessageOptions.DontRequireReceiver);
+        yield return new WaitForSeconds(0.05f);  // Enough to get one frame out
+
+        Spawner.ClearAll();
+        yield return null;
+    }
+
+    private IEnumerator WarmUpAndThenRun()
+    {
+        yield return StartCoroutine(WarmUp());
+        yield return new WaitForSeconds(0.1f); // optional: give GPU/Unity a moment to breathe
+        yield return StartCoroutine(RunTrials());
+    }
+
+    #endregion
 }
-
-

@@ -30,9 +30,9 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        frameRate = 60; //Screen.currentResolution.refreshRate; ; // get the current screen refresh rate
-        QualitySettings.vSyncCount = 0;           // disable V-Sync
-        Application.targetFrameRate = frameRate;        // set target FPS to 60 for consistency
+        frameRate = Screen.currentResolution.refreshRate; ; // get the current screen refresh rate
+        QualitySettings.vSyncCount = 1;           // enable V-Sync for accurate stimulus timing
+        Application.targetFrameRate = frameRate;        // set target FPS to screen refresh rate
 
         // auto-init default if none yet (so you can hit Play on any scene), but don’t mark as "started"
         if (string.IsNullOrEmpty(SessionName)

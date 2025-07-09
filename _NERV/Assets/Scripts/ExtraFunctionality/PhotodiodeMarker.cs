@@ -17,13 +17,20 @@ public class PhotodiodeMarker : MonoBehaviour
 
     void Awake()
     {
-        // auto-load fallback
         if (markerPrefab == null)
             markerPrefab = Resources.Load<GameObject>("Prefabs/WhiteCube");
 
         if (markerPrefab != null)
         {
-            _instance = Instantiate(markerPrefab, transform);
+            Camera cam = Camera.main;
+
+            // Spawn at screen's upper-left (z is distance from camera)
+            Vector3 screenPos = new Vector3(0, Screen.height, cam.nearClipPlane + 1f);
+            Vector3 worldPos = cam.ScreenToWorldPoint(screenPos);
+
+            _instance = Instantiate(markerPrefab);
+            _instance.transform.position = worldPos;
+            _instance.transform.localScale = new Vector3(1f, 1f, 0.01f); // adjust if needed
             _instance.SetActive(false);
         }
         else
@@ -31,6 +38,8 @@ public class PhotodiodeMarker : MonoBehaviour
             Debug.LogError("[PhotodiodeMarker] Failed to load WhiteCube prefab from Resources/Prefabs/WhiteCube");
         }
     }
+
+
 
     void OnLogEvent(string stateName)
     {

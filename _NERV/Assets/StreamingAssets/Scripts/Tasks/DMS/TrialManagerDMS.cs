@@ -6,79 +6,26 @@ using TMPro;
 using System.Linq;
 using System;
 
-public enum TrialStateDMS
-{
-    TrialOn,
-    SampleOn,
-    SampleOff,
-    DistractorOn,
-    DistractorOff,
-    TargetOn,
-    Choice,
-    Feedback,
-    Reset,
-}
+/// <summary>
+/// The structure of this script is as follows:
+/// 1) Core Trial Loop: The main experimental logic is run here.
+/// 2) Dependencies and Variables: All dependencies and variables are defined.
+/// 3) Initialization: Runs first, setting up dependencies, audio, and UI.
+/// 4) Helper Functions: Customizable utilities for the task.
+/// 
+/// Start() runs first -> Calls WarmUpAndThenRun() -> Runs RunTrials() coroutine.
+/// RunTrials() contains the main trial logic. Here is where you can edit the trial flow
+/// and set custom behaviors for each trial state.
+/// 
+/// This structure allows for quick customization of the trial flow,
+/// while keeping the core logic intact.
+/// 
+/// If you have any questions, or need assistance please reach out via
+/// GitHub or email kyle@coutray.com
+/// </summary>
 
 public class TrialManagerDMS : MonoBehaviour
 {
-    [Header("Dependencies (auto-wired)")]
-    public DependenciesContainer Deps;
-    private Camera PlayerCamera;
-    private StimulusSpawner Spawner;
-    private TMPro.TMP_Text FeedbackText;
-    private TMPro.TMP_Text ScoreText;
-    private GameObject CoinUI;
-    private BlockPauseController PauseController;
-
-    [Header("Block Pause")]
-    public bool PauseBetweenBlocks = true;
-    private int _totalBlocks;
-
-    [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 10f;
-    public float FeedbackDuration = 1f;
-    public int PointsPerCorrect = 2;
-    public int PointsPerWrong = -1;
-
-    public float TrialOnDuration = 2f;
-    public float SampleOnDuration = 0.5f;
-    public float SampleOffDuration = 0.5f;
-    public float DistractorOnDuration = 0.5f;
-    public float DistractorOffDuration = 2f;
-
-    private List<TrialData> _trials;
-    private int _currentIndex;
-    private int _score = 0;
-
-    private AudioSource _audioSrc;
-    private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;
-
-    [Header("Coin Feedback")]
-    public bool UseCoinFeedback = true;
-    public int CoinsPerCorrect = 2;
-
-    [Header("UI Toggles")]
-    public bool ShowScoreUI = true;
-    public bool ShowFeedbackUI = true;
-
-    // Pause Handling variables
-    private bool _pauseRequested = false;
-    private bool _inPause = false;
-
-    // Trial Summary Variables
-    private struct TrialResult
-    {
-        public bool isCorrect;
-        public float ReactionTimeMs;
-        public int DroppedFrames;
-    }
-    private List<TrialResult> _trialResults = new List<TrialResult>();
-    private float _trialStartTime;
-    private int _trialStartFrame;
-
-    private string _taskAcronym;
-    private int _trialsCompleted = 0;
-
     // Dictionary for TTL event codes
     private Dictionary<string, int> TTLEventCodes = new Dictionary<string, int>
     {
@@ -92,54 +39,11 @@ public class TrialManagerDMS : MonoBehaviour
         { "StartEndBlock", 8 }
     };
 
-    void Start() // Setting everything up for our main loop
-    {
-        //Force the GenericConfigManager into existence
-        if (GenericConfigManager.Instance == null)
-        {
-            new GameObject("GenericConfigManager")
-                .AddComponent<GenericConfigManager>();
-        }
 
-        // Auto-grab everything from the one DependenciesContainer in the scene
-        if (Deps == null)
-            Deps = FindObjectOfType<DependenciesContainer>();
-
-        // now assign local refs
-        PlayerCamera = Deps.MainCamera;
-        Spawner = Deps.Spawner;
-        FeedbackText = Deps.FeedbackText;
-        ScoreText = Deps.ScoreText;
-        CoinUI = Deps.CoinUI;
-        PauseController = Deps.PauseController;
-
-
-        _trials = GenericConfigManager.Instance.Trials;
-        _currentIndex = 0;
-        _taskAcronym = GetType().Name.Replace("TrialManager", "");
-
-        // hand yourself off to SessionLogManager
-        SessionLogManager.Instance.RegisterTrialManager(this, _taskAcronym);
-
-        // replace hard-coded TotalBlocks inspector value (if there is one)
-        _totalBlocks = (_trials.Count > 0) ? _trials[_trials.Count - 1].BlockCount : 1;
-
-        // UI Loads
-        UpdateScoreUI();
-        _audioSrc = GetComponent<AudioSource>();
-        _correctBeep = Resources.Load<AudioClip>("AudioClips/positiveBeep");
-        _errorBeep = Resources.Load<AudioClip>("AudioClips/negativeBeep");
-        _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/completeBar");
-
-        // CoinController setup
-        if (CoinUI != null) CoinUI.SetActive(UseCoinFeedback);
-        if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
-        if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
-        CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);
-
-
-        StartCoroutine(WarmUpAndThenRun()); // Preloads all stimuli first, then starts the RunTrials() loop
-    }
+    // ==========================================================
+    //  🧠 CORE TRIAL LOOP: Called by WarmUpAndThenRun() in Start()
+    //  This is the main experimental logic collaborators should edit.
+    // ==========================================================
 
     IEnumerator RunTrials()
     {
@@ -264,7 +168,7 @@ public class TrialManagerDMS : MonoBehaviour
                 _score += PointsPerCorrect;
                 if (!CoinController.Instance.CoinBarWasJustFilled)
                     _audioSrc.PlayOneShot(_correctBeep);
-                LogEvent("AudioPlaying");
+                LogEvent("AudioPlaying: _correctBeep");
                 LogEvent("Success");
                 FeedbackText.text = $"+{PointsPerCorrect}";
             }
@@ -273,7 +177,7 @@ public class TrialManagerDMS : MonoBehaviour
                 _score += PointsPerWrong;
                 UpdateScoreUI();
                 _audioSrc.PlayOneShot(_errorBeep);
-                LogEvent("AudioPlaying");
+                LogEvent("AudioPlaying: _errorBeep");
                 if (answered) { LogEvent("TargetSelected"); LogEvent("Fail"); }
                 else { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
@@ -345,6 +249,125 @@ public class TrialManagerDMS : MonoBehaviour
             yield return StartCoroutine(PauseController.ShowPause(-1, _totalBlocks));// the -1 is to send it to end game state
     }
 
+    // ==========================================================
+    // Here is where all variables are defined, and dependencies are wired.
+    // ==========================================================
+
+    #region Dependencies and Variable Declarations
+
+    [Header("Dependencies (auto-wired)")]
+    public DependenciesContainer Deps;
+    private Camera PlayerCamera;
+    private StimulusSpawner Spawner;
+    private TMPro.TMP_Text FeedbackText;
+    private TMPro.TMP_Text ScoreText;
+    private GameObject CoinUI;
+    private BlockPauseController PauseController;
+
+    [Header("Block Pause")]
+    public bool PauseBetweenBlocks = true;
+    private int _totalBlocks;
+
+    [Header("Timing & Scoring")]
+    public float MaxChoiceResponseTime = 10f;
+    public float FeedbackDuration = 1f;
+    public int PointsPerCorrect = 2;
+    public int PointsPerWrong = -1;
+
+    public float TrialOnDuration = 2f;
+    public float SampleOnDuration = 0.5f;
+    public float SampleOffDuration = 0.5f;
+    public float DistractorOnDuration = 0.5f;
+    public float DistractorOffDuration = 2f;
+
+    private List<TrialData> _trials;
+    private int _currentIndex;
+    private int _score = 0;
+
+    private AudioSource _audioSrc;
+    private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;
+
+    [Header("Coin Feedback")]
+    public bool UseCoinFeedback = true;
+    public int CoinsPerCorrect = 2;
+
+    [Header("UI Toggles")]
+    public bool ShowScoreUI = true;
+    public bool ShowFeedbackUI = true;
+
+    // Pause Handling variables
+    private bool _pauseRequested = false;
+    private bool _inPause = false;
+
+    // Trial Summary Variables
+    private struct TrialResult
+    {
+        public bool isCorrect;
+        public float ReactionTimeMs;
+        public int DroppedFrames;
+    }
+    private List<TrialResult> _trialResults = new List<TrialResult>();
+    private float _trialStartTime;
+    private int _trialStartFrame;
+
+    private string _taskAcronym;
+    private int _trialsCompleted = 0;
+    #endregion
+
+    // ==========================================================
+    //  INITIALIZATION: Runs FIRST, but moved under RunTrials() for simplicity.
+    //  This is where you set up your dependencies, audio, and UI.
+    // ==========================================================
+
+    #region Task Initialization: Start() and Update()
+    void Start() // Setting everything up for our main RunTrials() loop.
+    {
+        //Force the GenericConfigManager into existence
+        if (GenericConfigManager.Instance == null)
+        {
+            new GameObject("GenericConfigManager")
+                .AddComponent<GenericConfigManager>();
+        }
+
+        // Auto-grab everything from the one DependenciesContainer in the scene
+        if (Deps == null)
+            Deps = FindObjectOfType<DependenciesContainer>();
+
+        // now assign local refs
+        PlayerCamera = Deps.MainCamera;
+        Spawner = Deps.Spawner;
+        FeedbackText = Deps.FeedbackText;
+        ScoreText = Deps.ScoreText;
+        CoinUI = Deps.CoinUI;
+        PauseController = Deps.PauseController;
+
+
+        _trials = GenericConfigManager.Instance.Trials;
+        _currentIndex = 0;
+        _taskAcronym = GetType().Name.Replace("TrialManager", "");
+
+        // hand yourself off to SessionLogManager
+        SessionLogManager.Instance.RegisterTrialManager(this, _taskAcronym);
+
+        // replace hard-coded TotalBlocks inspector value (if there is one)
+        _totalBlocks = (_trials.Count > 0) ? _trials[_trials.Count - 1].BlockCount : 1;
+
+        // UI Loads
+        UpdateScoreUI();
+        _audioSrc = GetComponent<AudioSource>();
+        _correctBeep = Resources.Load<AudioClip>("AudioClips/positiveBeep");
+        _errorBeep = Resources.Load<AudioClip>("AudioClips/negativeBeep");
+        _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/completeBar");
+
+        // CoinController setup
+        if (CoinUI != null) CoinUI.SetActive(UseCoinFeedback);
+        if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+        if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+        CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);
+
+
+        StartCoroutine(WarmUpAndThenRun()); // Preloads all stimuli first, then starts the RunTrials() loop
+    }
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
@@ -359,16 +382,12 @@ public class TrialManagerDMS : MonoBehaviour
             _pauseRequested = true;
     }
 
-    void OnDestroy() // Cleanup event listeners
-    {
-        if (CoinController.Instance != null)
-            CoinController.Instance.OnCoinBarFilled -= () => _audioSrc.PlayOneShot(_coinBarFullBeep);
-    }
-
+    #endregion
     // ========= Helper Functions (customizable utilities) =========
     // These functions are separated out for clarity and included for Task customizability.
+    // ===========================================================
     #region Helper Functions    
-    
+
     IEnumerator ShowFeedback()
     {
         FeedbackText.canvasRenderer.SetAlpha(1f);
@@ -576,9 +595,22 @@ public class TrialManagerDMS : MonoBehaviour
     private IEnumerator WarmUpAndThenRun()
     {
         yield return StartCoroutine(WarmUp());
-        yield return new WaitForSeconds(0.1f); // optional: give GPU/Unity a moment to breathe
+        yield return new WaitForSeconds(0.1f); // give GPU/Unity a moment to breathe
         yield return StartCoroutine(RunTrials());
     }
 
     #endregion
+}
+
+public enum TrialStateDMS
+{
+    TrialOn,
+    SampleOn,
+    SampleOff,
+    DistractorOn,
+    DistractorOff,
+    TargetOn,
+    Choice,
+    Feedback,
+    Reset,
 }

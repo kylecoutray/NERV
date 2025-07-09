@@ -352,7 +352,10 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine();
             }
             else
+            {
                 sb.AppendLine("            yield return null;");
+                sb.AppendLine();
+            }
         }
 
         // Normal increment if not Reset

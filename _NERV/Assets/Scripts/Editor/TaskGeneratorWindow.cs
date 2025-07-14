@@ -205,7 +205,7 @@ public class TaskGeneratorWindow : EditorWindow
         // --- Core Trial Loop Header Comment ---
         sb.AppendLine("    // ==========================================================");
         sb.AppendLine("    //  🧠 CORE TRIAL LOOP: Called by WarmUpAndThenRun() in Start()");
-        sb.AppendLine("    //  This is the main experimental logic collaborators should edit.");
+        sb.AppendLine("    //  This is the main experimental logic developers should edit.");
         sb.AppendLine("    // ==========================================================");
 
         // --- RunTrials() ---

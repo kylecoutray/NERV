@@ -42,7 +42,7 @@ public class TrialManagerDMS : MonoBehaviour
 
     // ==========================================================
     //  🧠 CORE TRIAL LOOP: Called by WarmUpAndThenRun() in Start()
-    //  This is the main experimental logic collaborators should edit.
+    //  This is the main experimental logic developers should edit.
     // ==========================================================
 
     IEnumerator RunTrials()
@@ -54,7 +54,7 @@ public class TrialManagerDMS : MonoBehaviour
         if (PauseController != null && _trials?.Count > 0)
         {
             yield return StartCoroutine(
-                _trials[0].TrialID == "PRACTICE"
+                _trials[0].BlockCount == 0
                     ? PauseController.ShowPause("PRACTICE") // displays "practice" if we set up practice trials.
                     : PauseController.ShowPause(lastBlock, _totalBlocks)
             );

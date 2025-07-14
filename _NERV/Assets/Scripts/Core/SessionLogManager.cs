@@ -403,23 +403,32 @@ public class SessionLogManager : MonoBehaviour
     }
     private IEnumerator CaptureStateScreenshotCoroutine(string stateName)
     {
-        // wait for the frame where everything (world + UI) is drawn
+        // wait until end of frame so the backbuffer is fully rendered
         yield return new WaitForEndOfFrame();
 
         // optional extra delays if your spawns happen one frame later
         for (int i = 1; i < screenshotFrameDelay; i++)
             yield return new WaitForEndOfFrame();
 
-        // copy the full screen (including UI) into our RT
-        Graphics.Blit(null, _screenshotRT);
+        // capture & downscale in one GPU pass
+        ScreenCapture.CaptureScreenshotIntoRenderTexture(_screenshotRT);
 
-        // now do the async readback + encode + background write
+        // allow one more frame for the GPU to finish the blit
+        yield return new WaitForEndOfFrame();
+
+        // now async readback as before
         AsyncGPUReadback.Request(_screenshotRT, 0, request =>
         {
-            if (request.hasError) { Debug.LogWarning($"[Screenshot] GPU readback error for {stateName}"); return; }
+            if (request.hasError)
+            {
+                Debug.LogWarning($"[Screenshot] GPU readback error for {stateName}");
+                return;
+            }
+
             _screenshotTex.LoadRawTextureData(request.GetData<byte>());
             _screenshotTex.Apply(false, false);
             FlipVertical(_screenshotTex);
+
             byte[] jpg = _screenshotTex.EncodeToJPG(jpgQuality);
             string folder = Path.Combine(taskFolder, "StatesCaptured");
             Directory.CreateDirectory(folder);
@@ -429,6 +438,7 @@ public class SessionLogManager : MonoBehaviour
             Debug.Log($"<color=yellow>[Screenshot]</color> {stateName} → {fullPath}");
         });
     }
+
     void FlipVertical(Texture2D tex)
     {
         var pix = tex.GetPixels32();

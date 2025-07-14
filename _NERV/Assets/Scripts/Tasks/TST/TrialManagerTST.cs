@@ -33,7 +33,7 @@ public class TrialManagerTST : MonoBehaviour
 
     // ==========================================================
     //  🧠 CORE TRIAL LOOP: Called by WarmUpAndThenRun() in Start()
-    //  This is the main experimental logic collaborators should edit.
+    //  This is the main experimental logic developers should edit.
     // ==========================================================
     IEnumerator RunTrials()
     {

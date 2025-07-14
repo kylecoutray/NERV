@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using System;
 
 
 
@@ -18,7 +19,7 @@ public class BlockPauseController : MonoBehaviour
     public TMP_Text BlockLabelText;   // assign the “Block X of Y” text
     public Button ContinueButton;   // assign your “Continue” button
 
-    public Button EndSessionButton;    // the new “house” button
+    public Button EndSessionButton;    // the “house” button
     bool _continuePressed;
 
     [Header("Audio Toggle")]
@@ -91,6 +92,7 @@ public class BlockPauseController : MonoBehaviour
 
             BlockLabelText.text = "GAME COMPLETE";
             PauseCanvas.gameObject.SetActive(true);
+            DisplayManager.I.RefreshOverlays();
 
             // hide the house button (no home icon at GAME COMPLETE)
             EndSessionButton.gameObject.SetActive(false);
@@ -121,17 +123,21 @@ public class BlockPauseController : MonoBehaviour
         // update & show block status
         BlockLabelText.text = $"Block {blockIndex} of {totalBlocks}";
         PauseCanvas.gameObject.SetActive(true);
+        DisplayManager.I.RefreshOverlays();
 
         // wait for the button click
         while (!_continuePressed)
             yield return null;
 
+
         // hide and continue
         PauseCanvas.gameObject.SetActive(false);
+        DisplayManager.I.RefreshOverlays();
     }
 
     public IEnumerator ShowPause(string labelText)
     {
+
         float oldTS = Time.timeScale; // freeze unity time
         Time.timeScale = 0f;
 
@@ -143,29 +149,38 @@ public class BlockPauseController : MonoBehaviour
         BlockLabelText.text = labelText;
 
         PauseCanvas.gameObject.SetActive(true);
+        DisplayManager.I.RefreshOverlays();
         EndSessionButton.gameObject.SetActive(true);
 
         Debug.Log($"[BlockPauseController] Scene in a {labelText} State");
-        
+
         while (!_continuePressed)
             yield return new WaitForSecondsRealtime(0.1f);
 
+
         PauseCanvas.gameObject.SetActive(false);
+        DisplayManager.I.RefreshOverlays();
 
         Time.timeScale = oldTS; // restore unity time
     }
+
+    private void ToggleSound()
+    {
+        // flip the flag
+        _soundOn = !_soundOn;
+
+        // set master volume (1 or 0)
+        AudioListener.volume = _soundOn ? 1f : 0f;
+
+        // swap the button image
+        var img = SoundToggleButton.GetComponent<Image>();
+        if (img != null)
+            img.sprite = _soundOn ? _soundOnSprite : _soundOffSprite;
+    }
     
-        private void ToggleSound()
-        {
-            // flip the flag
-            _soundOn = !_soundOn;
-
-            // set master volume (1 or 0)
-            AudioListener.volume = _soundOn ? 1f : 0f;
-
-            // swap the button image
-            var img = SoundToggleButton.GetComponent<Image>();
-            if (img != null)
-                img.sprite = _soundOn ? _soundOnSprite : _soundOffSprite;
-        }
+    public void PressContinue()
+    {
+        _continuePressed = true;
+            
+    }
 }

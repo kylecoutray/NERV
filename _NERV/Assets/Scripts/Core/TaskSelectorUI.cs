@@ -44,6 +44,7 @@ public class TaskSelectorUI : MonoBehaviour
     public Button ToggleControlsButton;     // new eye icon
     public Sprite ControlsOpenSprite;       // show-icon
     public Sprite ControlsClosedSprite;     // hide-icon
+    public Button AdvancedSettingsButton; // button to open advanced settings
     public Button ExitButton; // self explanatory
 
     void Start()
@@ -166,6 +167,7 @@ public class TaskSelectorUI : MonoBehaviour
         soundToggleButton.gameObject.SetActive(false);
         SettingsUI.settingsButton.gameObject.SetActive(false);
         ExitButton.gameObject.SetActive(false);
+        SettingsUI.advancedSettingsContainer.gameObject.SetActive(false);
 
         // Audio toggle setup
         if (soundToggleButton == null)
@@ -244,7 +246,7 @@ public class TaskSelectorUI : MonoBehaviour
     }
 
 
-    void OnToggleControls()
+    public void OnToggleControls()
     {
         // flip the flag
         _controlsVisible = !_controlsVisible;
@@ -259,6 +261,10 @@ public class TaskSelectorUI : MonoBehaviour
         // ALWAYS hide the settings‐panel itself when you collapse
         SettingsUI.settingsPanel.SetActive(false);
         SettingsUI._isOpen = false;
+
+        SettingsUI.advancedSettingsContainer.SetActive(false);
+        SettingsUI.
+
 
         // show/hide the 3 buttons
         ExitButton.gameObject.SetActive(_controlsVisible);

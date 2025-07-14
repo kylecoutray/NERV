@@ -31,58 +31,79 @@ public class DwellClick : MonoBehaviour
 
     void Awake()
     {
-        _camera = Camera.main;
+        var mainCamGO = GameObject.FindGameObjectWithTag("MainCamera");
+        if (mainCamGO != null)
+            _camera = mainCamGO.GetComponent<Camera>();
+        else
+            _camera = Camera.main;
+
         if (_camera == null)
-            Debug.LogWarning("DwellClick: No Camera.main found; raycasts will fail.");
+            Debug.LogWarning("DwellClick: No camera found tagged MainCamera or on Camera.main; raycasts will fail.");
 
         // Auto-find or instantiate GazeCursor
         if (gazeCursor == null)
         {
+            Debug.Log("DwellClick Awake: gazeCursor was null");
+
             var existingGO = GameObject.Find("GazeCursor");
             if (existingGO != null)
             {
                 gazeCursor = existingGO.GetComponent<RectTransform>();
+                Debug.Log($"DwellClick Awake: Assigned gazeCursor from existingGO ({gazeCursor})");
             }
             else
             {
                 // Load the GazeCursor prefab (as GameObject) from Resources
                 var prefabGO = Resources.Load<GameObject>("Prefabs/GazeCursor");
+                Debug.Log($"DwellClick Awake: Loaded prefabGO = {prefabGO}");
+
                 if (prefabGO != null)
                 {
-                    // Get its RectTransform
                     var prefab = prefabGO.GetComponent<RectTransform>();
                     if (prefab != null)
                     {
-                        var canvas = FindObjectOfType<Canvas>();
-                        if (canvas != null)
+                        // Find the UI_Canvas explicitly by name
+                        var dependenciesRoot = GameObject.Find("Dependencies");
+                        var canvasGO = dependenciesRoot != null ? FindDeepChild(dependenciesRoot, "UI_Canvas") : null;
+
+                        if (canvasGO == null)
                         {
-                            // Instantiate under Canvas so UI elements render correctly
-                            RectTransform inst = Instantiate(prefab, canvas.transform, false);
-                            inst.name = "GazeCursor";
-                            // reset UI transform so it's visible at center
-                            inst.anchorMin = new Vector2(0.5f, 0.5f);
-                            inst.anchorMax = new Vector2(0.5f, 0.5f);
-                            inst.anchoredPosition = Vector2.zero;
-                            inst.localScale = Vector3.one;
-                            // bring to front
-                            inst.SetAsLastSibling();
-                            gazeCursor = inst;
+                            Debug.LogError("DwellClick: Cannot find a Canvas named 'UI_Canvas'. GazeCursor will not be visible.");
+                            return;
                         }
-                        else
+
+                        var canvas = canvasGO.GetComponent<Canvas>();
+                        if (canvas == null)
                         {
-                            var inst = Instantiate(prefab);
-                            inst.name = "GazeCursor";
-                            gazeCursor = inst;
+                            Debug.LogError("DwellClick: Found GameObject named 'UI_Canvas' but it has no Canvas component.");
+                            return;
                         }
+
+                        // Instantiate under UI_Canvas
+                        RectTransform inst = Instantiate(prefab, canvas.transform, false);
+                        inst.name = "GazeCursor";
+                        inst.anchorMin = new Vector2(0.5f, 0.5f);
+                        inst.anchorMax = new Vector2(0.5f, 0.5f);
+                        inst.anchoredPosition = Vector2.zero;
+                        inst.localScale = Vector3.one;
+                        inst.SetAsLastSibling();
+                        gazeCursor = inst;
+
+                        Debug.Log("DwellClick Awake: Successfully instantiated GazeCursor under UI_Canvas.");
                     }
                     else
                     {
-                        Debug.LogWarning("DwellClick: Could not find or load GazeCursor prefab at Resources/Prefabs/GazeCursor");
+                        Debug.LogWarning("DwellClick: Loaded prefab but no RectTransform component found.");
                     }
+                }
+                else
+                {
+                    Debug.LogWarning("DwellClick: Could not load GazeCursor prefab at Resources/Prefabs/GazeCursor");
                 }
             }
         }
     }
+
     void Update()
     {
         // Toggle cursor visibility
@@ -95,7 +116,9 @@ public class DwellClick : MonoBehaviour
         // Determine screen position:
         // - If simulateWithMouse is true, use the current mouse pointer position.
         // - Otherwise use the GazeCursor RectTransform (which follows your eye-tracker or custom coordinates).
-        // To hook in a real eye-tracker, replace gazeCursor.position with your tracker’s output:
+        // To hook in a real eye-tracker, replace you can either gazeCursor.position with your tracker’s output, or go into
+        // the GazeCursorController script and set gazeCursor.position there.
+        
         // Example with Tobii SDK:
         // var gazePoint = Tobii.Gaming.TobiiAPI.GetGazePoint();
         // Vector2 gazePos = new Vector2(gazePoint.Screen.x, gazePoint.Screen.y);
@@ -107,6 +130,7 @@ public class DwellClick : MonoBehaviour
         Vector2 screenPos = simulateWithMouse || gazeCursor == null
             ? (Vector2)Input.mousePosition
             : (Vector2)gazeCursor.position; // Change this line to YOUR Eye Tracker output position.
+            // Our eye tracking script sets the gazeCursor position and moves it around.
 
         // Update visualizer position
         if (gazeCursor != null)
@@ -145,4 +169,16 @@ public class DwellClick : MonoBehaviour
         _lastStim = null;
         _hoverTimer = 0f;
     }
+
+    private static GameObject FindDeepChild(GameObject parent, string name)
+    {
+        foreach (Transform child in parent.transform)
+        {
+            if (child.name == name) return child.gameObject;
+            var result = FindDeepChild(child.gameObject, name);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
 }

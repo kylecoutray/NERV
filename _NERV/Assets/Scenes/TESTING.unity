@@ -134,6 +134,8 @@ GameObject:
   - component: {fileID: 606308519}
   - component: {fileID: 606308518}
   - component: {fileID: 606308517}
+  - component: {fileID: 606308520}
+  - component: {fileID: 606308521}
   m_Layer: 0
   m_Name: TrialManagerTST
   m_TagString: Untagged
@@ -275,6 +277,41 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &606308520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 606308516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72a1e1e4469544fa38986b16c3589de3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pumpChannel: Dev1/port0/line0
+  numBursts: 1
+  highTime: 0.45
+  lowTime: 0.3
+  rewardStates:
+  - Success
+  testMode: 1
+--- !u!114 &606308521
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 606308516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 493a7c31dbbcf40508ce46c6e4f712c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dwellTime: 0.5
+  simulateWithMouse: 0
+  showGazeCursor: 1
+  gazeCursor: {fileID: 0}
 --- !u!1001 &805157131
 PrefabInstance:
   m_ObjectHideFlags: 0

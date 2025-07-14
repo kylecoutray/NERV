@@ -27,6 +27,8 @@ public class CoinController : MonoBehaviour
 
     Image[] _slots;
     int _coinsAccumulated;
+    public int CurrentCoins => _coinsAccumulated; // public getter for current coins
+    public System.Action<int> OnCoinsChanged;
 
     void Awake()
     {
@@ -66,48 +68,65 @@ public class CoinController : MonoBehaviour
 
     private IEnumerator AddCoinsRoutine(int n, Vector2 screenPos)
     {
+        // Cache Canvas and camera for render-mode handling
+        var canvasComp = CanvasRect.GetComponent<Canvas>();
+        Camera cam = (canvasComp.renderMode == RenderMode.ScreenSpaceOverlay)
+                    ? null
+                    : canvasComp.worldCamera;
+
         for (int i = 0; i < n && _coinsAccumulated < CoinBarSize; i++)
         {
-            // 1) Instantiate under the full‐screen Canvas, keep world position
+            // 1) Instantiate under the full-screen Canvas
             var go = Instantiate(MovingCoinPrefab, CanvasRect, false);
-            go.transform.SetAsLastSibling();  // on top
+            go.transform.SetAsLastSibling();
             var rt = go.GetComponent<RectTransform>();
 
-            // center pivot/anchors so position = screen pixels
+            // center pivot/anchors so position = screen pixels or world point
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.pivot      = new Vector2(0.5f, 0.5f);
 
             // make this moving coin green
             var moveImg = go.GetComponent<Image>();
             if (moveImg != null)
                 moveImg.color = Color.green;
 
+            // 2) Compute start position based on render mode
+            Vector3 startPos;
+            if (canvasComp.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                startPos = new Vector3(screenPos.x, screenPos.y + 10f, 0f);
+            }
+            else
+            {
+                RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                    CanvasRect,
+                    screenPos + Vector2.up * 10f,
+                    cam,
+                    out startPos
+                );
+            }
+            rt.position = startPos;
 
-            // 2) Directly place the coin at the click screen pixel
-            rt.position = new Vector3(screenPos.x, screenPos.y + 10, 0f);
-
-
-            // 3) Compute the target slot’s world position (UI slot)
+            // 3) Compute the target slot’s position (world-space works for all modes)
             var slotRT = _slots[_coinsAccumulated].rectTransform;
-            Vector3 slotPos = slotRT.position;  // world‐space UI position
+            Vector3 slotPos = slotRT.position;
 
-            // 4) Animate from click → slot
+            // 4) Animate from start → slot
             float t = 0f;
-            Vector3 start = rt.position;
             while (t < MoveDuration)
             {
                 t += Time.deltaTime;
-                go.transform.position = Vector3.Lerp(start, slotPos, t / MoveDuration);
+                rt.position = Vector3.Lerp(startPos, slotPos, t / MoveDuration);
                 yield return null;
             }
-            go.transform.position = slotPos;
+            rt.position = slotPos;
             Destroy(go);
 
-            // 5) Fill that slot
-            _slots[_coinsAccumulated].color = Color.white; // make it white
+            // 5) Fill that slot & notify
+            _slots[_coinsAccumulated].color = Color.white;
             _coinsAccumulated++;
+            OnCoinsChanged?.Invoke(_coinsAccumulated);
         }
-
 
         // 6) Flash & reset if full
         if (_coinsAccumulated >= CoinBarSize)
@@ -115,9 +134,10 @@ public class CoinController : MonoBehaviour
             CoinBarWasJustFilled = true;
             OnCoinBarFilled?.Invoke();
             yield return StartCoroutine(FlashAndReset());
-            CoinBarWasJustFilled = false; // reset after
+            CoinBarWasJustFilled = false;
         }
     }
+
 
 
 

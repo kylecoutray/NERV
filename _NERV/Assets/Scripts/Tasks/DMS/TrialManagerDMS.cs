@@ -47,6 +47,7 @@ public class TrialManagerDMS : MonoBehaviour
 
     IEnumerator RunTrials()
     {
+        
         // Check current trial block count (for pause handling)
         int lastBlock = _trials[0].BlockCount;
 
@@ -64,6 +65,7 @@ public class TrialManagerDMS : MonoBehaviour
 
         while (_currentIndex < _trials.Count)
         {
+            OnTrialStart?.Invoke();
             // start global trial timer
             float t0 = Time.realtimeSinceStartup;
             _trialStartTime = Time.time;
@@ -209,7 +211,7 @@ public class TrialManagerDMS : MonoBehaviour
 
 
             //Block Handling
-            int thisBlock = trial.BlockCount;
+            thisBlock = trial.BlockCount;
             int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;
 
             // SUMMARY Handling
@@ -264,9 +266,16 @@ public class TrialManagerDMS : MonoBehaviour
     private GameObject CoinUI;
     private BlockPauseController PauseController;
 
-    [Header("Block Pause")]
+    [Header("UI Toggles")]
+    public bool ShowScoreUI = true;
+    public bool ShowFeedbackUI = true;
+
+    [Header("Coin Feedback")]
+    public bool UseCoinFeedback = true;
+    public int CoinsPerCorrect = 2;
+
+    [Header("Block behavior")]
     public bool PauseBetweenBlocks = true;
-    private int _totalBlocks;
 
     [Header("Timing & Scoring")]
     public float MaxChoiceResponseTime = 10f;
@@ -280,24 +289,19 @@ public class TrialManagerDMS : MonoBehaviour
     public float DistractorOnDuration = 0.5f;
     public float DistractorOffDuration = 2f;
 
-    private List<TrialData> _trials;
-    private int _currentIndex;
+    [Header("Helper Variables")]    
+    public List<TrialData> _trials;
+    public int _currentIndex;
     private int _score = 0;
 
     private AudioSource _audioSrc;
     private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;
-
-    [Header("Coin Feedback")]
-    public bool UseCoinFeedback = true;
-    public int CoinsPerCorrect = 2;
-
-    [Header("UI Toggles")]
-    public bool ShowScoreUI = true;
-    public bool ShowFeedbackUI = true;
-
     // Pause Handling variables
     private bool _pauseRequested = false;
     private bool _inPause = false;
+
+    public int _totalBlocks;
+    public int thisBlock;
 
     // Trial Summary Variables
     private struct TrialResult
@@ -311,6 +315,7 @@ public class TrialManagerDMS : MonoBehaviour
     private int _trialStartFrame;
 
     private string _taskAcronym;
+    public event Action OnTrialStart;
     private int _trialsCompleted = 0;
     #endregion
 
@@ -370,16 +375,21 @@ public class TrialManagerDMS : MonoBehaviour
     }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
+        if (Input.GetKey(KeyCode.Tab))
         {
-            ShowScoreUI = !ShowScoreUI;
-            ShowFeedbackUI = !ShowFeedbackUI;
-            if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
-            if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
-        }
 
-        if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
-            _pauseRequested = true;
+            if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
+            {
+                ShowScoreUI = !ShowScoreUI;
+                ShowFeedbackUI = !ShowFeedbackUI;
+                if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+                if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+            }
+
+            if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
+                _pauseRequested = true;
+
+        }
     }
 
     #endregion
@@ -417,7 +427,6 @@ public class TrialManagerDMS : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit))
                 {
@@ -578,6 +587,7 @@ public class TrialManagerDMS : MonoBehaviour
 
         // Spawn all stimuli
         var goList = Spawner.SpawnStimuli(usedIndices.ToArray(), locs);
+        Debug.Log($"[WarmUp] Spawned {goList.Count} stimuli for warmup.");
 
         // Wait for Unity to register them
         yield return new WaitForEndOfFrame();

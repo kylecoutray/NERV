@@ -229,6 +229,8 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("        // Begin the main loop for running trials");
         sb.AppendLine("        while (_currentIndex < _trials.Count)");
         sb.AppendLine("        {");
+        sb.AppendLine();
+        sb.AppendLine("            OnTrialStart?.Invoke(); // Notify any listeners that a trial is starting");
         sb.AppendLine("            /// === [TRIAL VAR. HANDLING] ===");
         sb.AppendLine("            // Start global trial timer");
         sb.AppendLine("            float t0 = Time.realtimeSinceStartup;");
@@ -367,7 +369,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine();
         sb.AppendLine();
         sb.AppendLine("            //Block Handling");
-        sb.AppendLine("            int thisBlock = trial.BlockCount;");
+        sb.AppendLine("            thisBlock = trial.BlockCount;");
         sb.AppendLine("            int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex+1].BlockCount : -1;");
         sb.AppendLine();
         sb.AppendLine();
@@ -425,10 +427,21 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("    private BlockPauseController PauseController;");
         sb.AppendLine();
 
+                // UI Toggles
+        sb.AppendLine("    [Header(\"UI Toggles\")]");
+        sb.AppendLine("    public bool ShowScoreUI = true;");
+        sb.AppendLine("    public bool ShowFeedbackUI = true;");
+        sb.AppendLine();
+
+        // Coin Feedback
+        sb.AppendLine("    [Header(\"Coin Feedback\")]");
+        sb.AppendLine("    public bool UseCoinFeedback = true;");
+        sb.AppendLine("    public int CoinsPerCorrect = 2;");
+        sb.AppendLine();
+
         // Block Information
         sb.AppendLine("    [Header(\"Block Pause\")]");
         sb.AppendLine("    public bool PauseBetweenBlocks = true;");
-        sb.AppendLine("    private int _totalBlocks;");
         sb.AppendLine();
 
         // Timing & Scoring
@@ -444,10 +457,14 @@ public class TaskGeneratorWindow : EditorWindow
             sb.AppendLine($"    public float {st.Name}Duration = {st.PostStateDelay}f;");
         sb.AppendLine();
 
+        sb.AppendLine("    [Header(\"Helper Variables\")]");
+
         // Private fields
-        sb.AppendLine("    private List<TrialData> _trials;");
-        sb.AppendLine("    private int _currentIndex;");
+        sb.AppendLine("    public List<TrialData> _trials;");
+        sb.AppendLine("    public int _currentIndex;");
         sb.AppendLine("    private int _score = 0;");
+        sb.AppendLine("    public int _totalBlocks;");
+        sb.AppendLine("    public int thisBlock;");
         sb.AppendLine();
 
         // Audio
@@ -455,17 +472,6 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("    private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;");
         sb.AppendLine();
 
-        // Coin Feedback
-        sb.AppendLine("    [Header(\"Coin Feedback\")]");
-        sb.AppendLine("    public bool UseCoinFeedback = true;");
-        sb.AppendLine("    public int CoinsPerCorrect = 2;");
-        sb.AppendLine();
-
-        // UI Toggles
-        sb.AppendLine("    [Header(\"UI Toggles\")]");
-        sb.AppendLine("    public bool ShowScoreUI = true;");
-        sb.AppendLine("    public bool ShowFeedbackUI = true;");
-        sb.AppendLine();
 
         // Pause Handling
         sb.AppendLine("    //Pause Handling");
@@ -485,6 +491,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine();
         sb.AppendLine("    private string _taskAcronym;");
         sb.AppendLine("    private int _trialsCompleted = 0;");
+        sb.AppendLine("    public event Action OnTrialStart;");
         sb.AppendLine("    #endregion");
         sb.AppendLine();
 
@@ -547,16 +554,19 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine();
         sb.AppendLine("    void Update()");
         sb.AppendLine("    {");
-        sb.AppendLine("        if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI");
+        sb.AppendLine("        if (Input.GetKey(KeyCode.Tab))");
         sb.AppendLine("        {");
-        sb.AppendLine("            ShowScoreUI    = !ShowScoreUI;");
-        sb.AppendLine("            ShowFeedbackUI = !ShowFeedbackUI;");
-        sb.AppendLine("            if (ScoreText    != null) ScoreText.gameObject.SetActive(ShowScoreUI);");
-        sb.AppendLine("            if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);");
-        sb.AppendLine("        }");
+        sb.AppendLine("            if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI");
+        sb.AppendLine("            {");
+        sb.AppendLine("                ShowScoreUI    = !ShowScoreUI;");
+        sb.AppendLine("                ShowFeedbackUI = !ShowFeedbackUI;");
+        sb.AppendLine("                if (ScoreText    != null) ScoreText.gameObject.SetActive(ShowScoreUI);");
+        sb.AppendLine("                if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);");
+        sb.AppendLine("            }");
         sb.AppendLine();
-        sb.AppendLine("        if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene");
-        sb.AppendLine("        _pauseRequested = true;");
+        sb.AppendLine("            if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene");
+        sb.AppendLine("            _pauseRequested = true;");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("    #endregion");
         sb.AppendLine();
@@ -596,7 +606,6 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine();
         sb.AppendLine("            if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)");
         sb.AppendLine("            {");
-        sb.AppendLine("                LogEvent(\"Clicked\");");
         sb.AppendLine("                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);");
         sb.AppendLine("                if (Physics.Raycast(ray, out var hit))");
         sb.AppendLine("                {");
@@ -753,7 +762,7 @@ public class TaskGeneratorWindow : EditorWindow
 
         sb.AppendLine("        // Spawn all stimuli");
         sb.AppendLine("        var goList = Spawner.SpawnStimuli(usedIndices.ToArray(), locs);");
-
+        sb.AppendLine("        Debug.Log($\"[WarmUp] Spawned {goList.Count} stimuli for warmup.\");");
         sb.AppendLine("        // Wait for Unity to register them");
         sb.AppendLine("        yield return new WaitForEndOfFrame();");
         sb.AppendLine("        yield return null;");

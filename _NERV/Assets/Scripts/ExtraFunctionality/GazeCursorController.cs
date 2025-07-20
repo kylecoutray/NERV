@@ -20,8 +20,9 @@ using static NativeDAQmx;
 public class GazeCursorController : MonoBehaviour
 {
     [Header("Cursor & Canvas")]
-    public RectTransform gazeCursor;      // will auto-load if null
+    public RectTransform gazeCursor;      // will auto-find or auto-load if null
     public Canvas targetCanvas;     // will try FindObjectOfType if null
+
 
     [Header("DAQ Settings")]
     public string deviceName = "Dev1";    // your NI device
@@ -32,6 +33,15 @@ public class GazeCursorController : MonoBehaviour
 
     void Awake()
     {
+        // Attempt to find an existing GazeCursor in the scene by name
+        if (gazeCursor == null)
+        {
+            var existing = GameObject.Find("GazeCursor");
+            if (existing != null)
+            {
+                gazeCursor = existing.GetComponent<RectTransform>();
+            }
+        }
         // Auto-instantiate GazeCursor prefab if none assigned
         if (gazeCursor == null)
         {

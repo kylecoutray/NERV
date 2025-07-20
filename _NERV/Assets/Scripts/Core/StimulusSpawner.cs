@@ -64,7 +64,6 @@ public class StimulusSpawner : MonoBehaviour
             {
                 var go = Instantiate(prefab, locations[i], Quaternion.identity, StimuliParent);
                 go.transform.localScale = Vector3.one * BaseStimulusScale;
-                Debug.Log($"[LOADING] Stimulus {stimIndex} (file: {fileName}) instantiated at {locations[i]}");
                 
                 if (_mainCamera != null)
                 {

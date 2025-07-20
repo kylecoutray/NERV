@@ -67,7 +67,7 @@ public class SessionLogManager : MonoBehaviour
 
     // holds the active TrialManager instance and its acronym
     private object _currentTrialManager = null;
-    private string _currentTaskAcronym  = null;
+    private string _currentTaskAcronym = null;
 
 
     public void InitializeSerialPort()
@@ -99,7 +99,7 @@ public class SessionLogManager : MonoBehaviour
         Instance = this;
 
         if (transform.parent != null) transform.SetParent(null);
-            DontDestroyOnLoad(gameObject);
+        DontDestroyOnLoad(gameObject);
 
         // record session start
         _sessionStartEpoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -119,6 +119,11 @@ public class SessionLogManager : MonoBehaviour
 
         if (tm == null)
             return; // not our trial scene
+
+        // register our TrialProgressDisplay with our TrialManager
+        var ui = FindObjectOfType<TrialProgressDisplay>();
+        if (ui != null)
+            ui.RegisterTrialManager(tm, acr);
 
         // close any prior logs if they exist
         if (allWriter != null)
@@ -290,8 +295,8 @@ public class SessionLogManager : MonoBehaviour
         allWriter.Flush();
 
         Debug.Log(
-            $"[ALL_LOGS] Frame: {frame}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
-            $"TrialID: {trialID}, Event: {evt}, {details}"
+            $"<b>[ALL_LOGS]</b> TrialID: {trialID}, Event: {evt}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
+            $"Frame: {frame}, {details}"
         );
 
         // bump the seen‐count for this state
@@ -352,16 +357,12 @@ public class SessionLogManager : MonoBehaviour
         );
         ttlWriter.Flush();
 
-        Debug.Log(
-            $"[TTL] Frame: {frame}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
-            $"Status: {status}, Event: {evt}, Code: {ttlCode}, Byte: {byteSent}"
-        );
-
         // console feedback
-        string line = $"[TTL] Frame: {frame}, Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, " +
-            $"{status}, Event: {evt}, Code: {ttlCode}, Byte: {byteSent}";
-        if (status == "FAILED") Debug.LogWarning($"[TTL] {line}");
-        else Debug.Log($"[TTL] {line}");
+        string line = $"<b>[TTL]</b> Event: {evt}, Code: {ttlCode}, Byte: {byteSent},Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, Frame: {frame}, " +
+            $"{status}";
+
+        if (status == "FAILED") Debug.LogWarning($"FAILED TTL!");
+        else Debug.Log($"{line}");
     }
 
 
@@ -529,8 +530,8 @@ public class SessionLogManager : MonoBehaviour
     [Serializable]
     public class TrialDetail
     {
-        public int   TrialIndex;
-        public bool  Correct;
+        public int TrialIndex;
+        public bool Correct;
         public float ReactionTimeMs;
     }
 
@@ -610,17 +611,34 @@ public class SessionLogManager : MonoBehaviour
 
         // clear for the next scene
         _currentTrialManager = null;
-        _currentTaskAcronym  = null;
+        _currentTaskAcronym = null;
     }
 
-    
+
     /// <summary>
-    /// TrialManager calls this in Awake to register itself & its acronym.
+    /// TrialManager calls this in Awake to register itself and its acronym.
     /// </summary>
     public void RegisterTrialManager(object manager, string acronym)
     {
         _currentTrialManager = manager;
         _currentTaskAcronym = acronym;
+    }
+    
+
+    /// <summary>
+    /// Append a single experimenter comment (already timestamped) to experimenter_comments.txt
+    /// in the current task’s folder.
+    /// </summary>
+    public void LogExperimenterComment(string commentLine)
+    {
+        // ensure taskFolder is set (it’s set in OnSceneLoaded)
+        if (string.IsNullOrEmpty(taskFolder))
+        {
+            Debug.LogError("SessionLogManager: taskFolder not initialized; cannot log comment.");
+            return;
+        }
+        string path = Path.Combine(taskFolder, "experimenter_comments.txt");
+        File.AppendAllText(path, commentLine + System.Environment.NewLine);
     }
 
 }

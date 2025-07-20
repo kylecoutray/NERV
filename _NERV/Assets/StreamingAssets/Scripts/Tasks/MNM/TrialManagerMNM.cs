@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Linq;
+using System;
 
 /// <summary>
 /// The structure of this script is as follows:
@@ -38,7 +39,7 @@ public class TrialManagerMNM : MonoBehaviour
 
     // ==========================================================
     //  🧠 CORE TRIAL LOOP: Called by WarmUpAndThenRun() in Start()
-    //  This is the main experimental logic collaborators should edit.
+    //  This is the main experimental logic developers should edit.
     // ==========================================================
     IEnumerator RunTrials()
     {
@@ -49,7 +50,7 @@ public class TrialManagerMNM : MonoBehaviour
         if (PauseController != null && _trials?.Count > 0)
         {
             yield return StartCoroutine(
-                _trials[0].TrialID == "PRACTICE"
+                _trials[0].BlockCount == 0
                     ? PauseController.ShowPause("PRACTICE") // displays practice if we set up practice sessions.
                     : PauseController.ShowPause(lastBlock, _totalBlocks)
             );
@@ -60,6 +61,7 @@ public class TrialManagerMNM : MonoBehaviour
 
         while (_currentIndex < _trials.Count)
         {
+            OnTrialStart?.Invoke(); // Notify any listeners that a trial is starting
             // start global trial timer
             float t0 = Time.realtimeSinceStartup;
             _trialStartTime = Time.time;
@@ -231,7 +233,7 @@ public class TrialManagerMNM : MonoBehaviour
             float t1 = Time.realtimeSinceStartup;
 
             //Block Handling
-            int thisBlock = trial.BlockCount;
+            thisBlock = trial.BlockCount;
             int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;
 
             // SUMMARY Handling
@@ -285,9 +287,17 @@ public class TrialManagerMNM : MonoBehaviour
     private GameObject CoinUI;
     private BlockPauseController PauseController;
 
+    [Header("UI Toggles")]
+    public bool ShowScoreUI = true;
+    public bool ShowFeedbackUI = true;
+
+    [Header("Coin Feedback")]
+    public bool UseCoinFeedback = true;
+    public int CoinsPerCorrect = 2;
+
     [Header("Block Pause")]
     public bool PauseBetweenBlocks = true;
-    private int _totalBlocks;
+
     [Header("Timing & Scoring")]
     public float MaxChoiceResponseTime = 10f;
     public float FeedbackDuration = 1f;
@@ -301,20 +311,15 @@ public class TrialManagerMNM : MonoBehaviour
     public float SampleOnDuration = 0.5f;
     public float Delay2Duration = 0.25f;
 
-    private List<TrialData> _trials;
-    private int _currentIndex;
+    [Header("Helper Variables")]
+    public List<TrialData> _trials;
+    public int _currentIndex;
     private int _score = 0;
+    public int _totalBlocks;
+    public int thisBlock;
 
     private AudioSource _audioSrc;
     private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;
-
-    [Header("Coin Feedback")]
-    public bool UseCoinFeedback = true;
-    public int CoinsPerCorrect = 2;
-
-    [Header("UI Toggles")]
-    public bool ShowScoreUI = true;
-    public bool ShowFeedbackUI = true;
 
     // Pause Handling
     private bool _pauseRequested = false;
@@ -333,6 +338,7 @@ public class TrialManagerMNM : MonoBehaviour
 
     private string _taskAcronym;
     private int _trialsCompleted = 0;
+    public event Action OnTrialStart;
 
 
     [Header("Match/Non-Match Options")]
@@ -396,15 +402,21 @@ public class TrialManagerMNM : MonoBehaviour
     }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.S))
+        if (Input.GetKey(KeyCode.Tab))
         {
-            ShowScoreUI = !ShowScoreUI;
-            ShowFeedbackUI = !ShowFeedbackUI;
-            if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
-            if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+
+            if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
+            {
+                ShowScoreUI = !ShowScoreUI;
+                ShowFeedbackUI = !ShowFeedbackUI;
+                if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+                if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+            }
+
+            if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
+                _pauseRequested = true;
+
         }
-        if (Input.GetKeyDown(KeyCode.P) && _inPause == false)
-            _pauseRequested = true;
     }
 
     #endregion
@@ -492,7 +504,6 @@ public class TrialManagerMNM : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit))
                 {
@@ -618,6 +629,7 @@ public class TrialManagerMNM : MonoBehaviour
 
         // Spawn all stimuli
         var goList = Spawner.SpawnStimuli(usedIndices.ToArray(), locs);
+        Debug.Log($"[WarmUp] Spawned {goList.Count} stimuli for warmup.");
 
         // Wait for Unity to register them
         yield return new WaitForEndOfFrame();

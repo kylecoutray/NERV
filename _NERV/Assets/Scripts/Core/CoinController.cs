@@ -34,7 +34,7 @@ public class CoinController : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        
+
 
         // Auto‐find the real UI Canvas if needed
         if (CanvasRect == null || CanvasRect.GetComponent<Canvas>() == null)
@@ -83,7 +83,7 @@ public class CoinController : MonoBehaviour
 
             // center pivot/anchors so position = screen pixels or world point
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot      = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
 
             // make this moving coin green
             var moveImg = go.GetComponent<Image>();
@@ -192,6 +192,22 @@ public class CoinController : MonoBehaviour
             // now “remove” it: grey it out and decrement
             img.color = new Color(0.5f, 0.5f, 0.5f, 1f);
             _coinsAccumulated--;
+        }
+    }
+
+    private bool _useCoinFeedback = true;
+    /// <summary>
+    /// When set, immediately toggles the entire coin‐UI Canvas on/off.
+    /// </summary>
+    public bool UseCoinFeedback
+    {
+        get => _useCoinFeedback;
+        set
+        {
+            if (_useCoinFeedback == value) return;
+            _useCoinFeedback = value;
+            if (CanvasRect != null)
+                CanvasRect.gameObject.SetActive(_useCoinFeedback);
         }
     }
 

@@ -97,7 +97,7 @@ public class TaskSelectorUI : MonoBehaviour
 
         Debug.Log(
             "<b><size=14><color=white><<: ¤=[</color> <color=#FF2A50><b>WELCOME TO NERV</b></color> <color=white>]=¤ :>></color></size></b> "
-        + "<i><color=white>• A Unity-based framework for neuroscience experiment execution</color></i>\n"
+        + "<i><color=white>• A Unity-based framework for neuroscience experiment design & execution</color></i>\n"
         + " "
         );
 

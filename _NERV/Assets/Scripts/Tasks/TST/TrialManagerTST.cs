@@ -55,6 +55,8 @@ public class TrialManagerTST : MonoBehaviour
         // Begin the main loop for running trials
         while (_currentIndex < _trials.Count)
         {
+
+            OnTrialStart?.Invoke(); // Notify any listeners that a trial is starting
             /// === [TRIAL VAR. HANDLING] ===
             // Start global trial timer
             float t0 = Time.realtimeSinceStartup;
@@ -109,11 +111,12 @@ public class TrialManagerTST : MonoBehaviour
                 reactionT = rt;
             }));
 
-            // strip out destroyed references
+            // Strip out destroyed references
             spawnedItems.RemoveAll(go => go == null);
             GameObject targetGO = spawnedItems.Find(go => go.GetComponent<StimulusID>().Index == pickedIdx);
 
             yield return null;
+
             // — FEEDBACK —
             LogEvent("Feedback");
 
@@ -157,6 +160,7 @@ public class TrialManagerTST : MonoBehaviour
             yield return StartCoroutine(WaitInterruptable(FeedbackDuration));
 
             yield return null;
+
             // End global trial timer
             float t1 = Time.realtimeSinceStartup;
 
@@ -165,7 +169,7 @@ public class TrialManagerTST : MonoBehaviour
 
 
             //Block Handling
-            int thisBlock = trial.BlockCount;
+            thisBlock = trial.BlockCount;
             int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex+1].BlockCount : -1;
 
 
@@ -218,9 +222,16 @@ public class TrialManagerTST : MonoBehaviour
     private GameObject   CoinUI;
     private BlockPauseController PauseController;
 
+    [Header("UI Toggles")]
+    public bool ShowScoreUI = true;
+    public bool ShowFeedbackUI = true;
+
+    [Header("Coin Feedback")]
+    public bool UseCoinFeedback = true;
+    public int CoinsPerCorrect = 2;
+
     [Header("Block Pause")]
     public bool PauseBetweenBlocks = true;
-    private int _totalBlocks;
 
     [Header("Timing & Scoring")]
     public float MaxChoiceResponseTime = 10f;
@@ -231,20 +242,15 @@ public class TrialManagerTST : MonoBehaviour
     public float SampleOnDuration = 1f;
     public float DistractorOnDuration = 0f;
 
-    private List<TrialData> _trials;
-    private int _currentIndex;
+    [Header("Helper Variables")]
+    public List<TrialData> _trials;
+    public int _currentIndex;
     private int _score = 0;
+    public int _totalBlocks;
+    public int thisBlock;
 
     private AudioSource _audioSrc;
     private AudioClip _correctBeep, _errorBeep, _coinBarFullBeep;
-
-    [Header("Coin Feedback")]
-    public bool UseCoinFeedback = true;
-    public int CoinsPerCorrect = 2;
-
-    [Header("UI Toggles")]
-    public bool ShowScoreUI = true;
-    public bool ShowFeedbackUI = true;
 
     //Pause Handling
     private bool _pauseRequested = false;
@@ -263,6 +269,7 @@ public class TrialManagerTST : MonoBehaviour
 
     private string _taskAcronym;
     private int _trialsCompleted = 0;
+    public event Action OnTrialStart;
     #endregion
 
     // ==========================================================
@@ -322,16 +329,19 @@ public class TrialManagerTST : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
+        if (Input.GetKey(KeyCode.Tab))
         {
-            ShowScoreUI    = !ShowScoreUI;
-            ShowFeedbackUI = !ShowFeedbackUI;
-            if (ScoreText    != null) ScoreText.gameObject.SetActive(ShowScoreUI);
-            if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
-        }
+            if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
+            {
+                ShowScoreUI    = !ShowScoreUI;
+                ShowFeedbackUI = !ShowFeedbackUI;
+                if (ScoreText    != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+                if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+            }
 
-        if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
-        _pauseRequested = true;
+            if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
+            _pauseRequested = true;
+        }
     }
     #endregion
 
@@ -370,7 +380,6 @@ public class TrialManagerTST : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                LogEvent("Clicked");
                 var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out var hit))
                 {
@@ -523,6 +532,7 @@ public class TrialManagerTST : MonoBehaviour
             .ToArray();
         // Spawn all stimuli
         var goList = Spawner.SpawnStimuli(usedIndices.ToArray(), locs);
+        Debug.Log($"[WarmUp] Spawned {goList.Count} stimuli for warmup.");
         // Wait for Unity to register them
         yield return new WaitForEndOfFrame();
         yield return null;

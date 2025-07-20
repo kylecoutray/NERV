@@ -3,6 +3,9 @@ using UnityEngine.SceneManagement;
 using System;
 using System.IO;
 using TMPro;
+using System.Linq;
+using System.Reflection;
+
 
 public class DisplayManager : MonoBehaviour
 {
@@ -19,6 +22,8 @@ public class DisplayManager : MonoBehaviour
   public static DisplayManager I { get; private set; }
   public static event Action<Mode> OnModeChanged;
 
+
+
   public Mode CurrentMode { get; private set; }
 
   [Header("Overlays (Display 1)")]
@@ -32,6 +37,10 @@ public class DisplayManager : MonoBehaviour
   private GameObject _monkeyOverlay;
   private GameObject _experimenterUI;
 
+  [Header("Pause UI")]
+  [Tooltip("Drag your PauseCanvas here—even if it starts disabled")]
+  [SerializeField] private Canvas pauseCanvas;
+  private GameObject _pauseButton;
 
   private string ConfigPath => Path.Combine(Application.persistentDataPath, "displayConfig.json");
 
@@ -40,11 +49,12 @@ public class DisplayManager : MonoBehaviour
     // singleton
     if (I != null) { Destroy(gameObject); return; }
     I = this;
-    DontDestroyOnLoad(gameObject);
+
+    // grab the PauseButton once by name
+    _pauseButton = GameObject.Find("PauseButton");
 
     // re-apply whenever any scene loads
     SceneManager.sceneLoaded += OnSceneLoaded;
-
     LoadConfig();
     ApplyDisplayMode(CurrentMode);
   }
@@ -54,7 +64,7 @@ public class DisplayManager : MonoBehaviour
     SceneManager.sceneLoaded -= OnSceneLoaded;
   }
 
-  void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+  void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
   {
     ActivateDisplays();
     SetupDisplays();
@@ -67,6 +77,12 @@ public class DisplayManager : MonoBehaviour
     ActivateDisplays();
     SetupDisplays();
     OnModeChanged?.Invoke(mode);
+    bool on = (mode != Mode.DualMonkey);
+    SetTrialManagerScoreUI(on);
+    SetTrialManagerFeedbackUI(on);
+
+      if (_pauseButton != null) //hide pause button in DualMonkey mode
+        _pauseButton.SetActive(mode != Mode.DualMonkey);
   }
 
   void ActivateDisplays()
@@ -86,15 +102,19 @@ public class DisplayManager : MonoBehaviour
   void SetupDisplays()
   {
     // clear old overlays
-    if (_humanOverlay != null) { Destroy(_humanOverlay); _humanOverlay = null; }
-    if (_monkeyOverlay != null) { Destroy(_monkeyOverlay); _monkeyOverlay = null; }
+    if (_humanOverlay != null) _humanOverlay.SetActive(false);
+    if (_monkeyOverlay != null) _monkeyOverlay.SetActive(false);
+
 
     var sceneName = SceneManager.GetActiveScene().name;
 
     // 1) Human-waiting overlay on Display 1, **only** in TaskSelector
     if (CurrentMode == Mode.DualHuman && humanOverlayPrefab != null && sceneName == "TaskSelector")
     {
-      _humanOverlay = Instantiate(humanOverlayPrefab);
+      if (_humanOverlay == null)
+        _humanOverlay = Instantiate(humanOverlayPrefab);
+
+      _humanOverlay.SetActive(true);
       var c = _humanOverlay.GetComponent<Canvas>();
       if (c != null) c.targetDisplay = 0;
     }
@@ -104,7 +124,10 @@ public class DisplayManager : MonoBehaviour
         && monkeyOverlayPrefab != null
         && (sceneName == "TaskSelector" || IsPaused()))
     {
-      _monkeyOverlay = Instantiate(monkeyOverlayPrefab);
+      if (_monkeyOverlay == null)
+        _monkeyOverlay = Instantiate(monkeyOverlayPrefab);
+
+      _monkeyOverlay.SetActive(true);
       var mc = _monkeyOverlay.GetComponent<Canvas>();
       if (mc != null) mc.targetDisplay = 0;
     }
@@ -114,37 +137,48 @@ public class DisplayManager : MonoBehaviour
         && sceneName != "TaskSelector"
         && experimenterPrefab != null)
     {
-       // only create or find once
-       if (_experimenterUI == null)
-       {
-          // 3a) try to find a scene-placed instance first (by name or tag)
-          var existing = GameObject.Find("ExperimenterCanvas") ?? GameObject.FindWithTag("ExperimenterUI");
-          if (existing != null)
-          {
-            _experimenterUI = existing;
-          }
-          else
-          {
-            // 3b) otherwise instantiate the prefab
-            _experimenterUI = Instantiate(experimenterPrefab);
-          }
+      // only create or find once
+      if (_experimenterUI == null)
+      {
+        // 3a) try to find a scene-placed instance first (by name or tag)
+        var existing = GameObject.Find("ExperimenterOverlay") ?? GameObject.FindWithTag("ExperimenterUI");
+        if (existing != null)
+        {
+          _experimenterUI = existing;
+        }
+        else
+        {
+          // 3b) otherwise instantiate the prefab
+          _experimenterUI = Instantiate(experimenterPrefab);
+        }
 
-          // now assign it to display 2
-          var canvases = _experimenterUI.GetComponentsInChildren<Canvas>(true);
-          if (canvases.Length == 0)
-            Debug.LogError("DisplayManager: experimenterPrefab has no Canvas!");
-          else
-            foreach (var c in canvases)
-              c.targetDisplay = 1;
-       }
+        // now assign it to display 2
+        var canvases = _experimenterUI.GetComponentsInChildren<Canvas>(true);
+        if (canvases.Length == 0)
+          Debug.LogError("DisplayManager: experimenterPrefab has no Canvas!");
+        else
+          foreach (var c in canvases)
+            c.targetDisplay = 1;
+      }
     }
   }
   // detects the PauseCanvas by name; tweak to use a tag or inspector reference
 
   public bool IsPaused()
   {
-    var pauseGO = GameObject.Find("PauseCanvas");
-    return pauseGO != null && pauseGO.activeInHierarchy;
+    // Find every Canvas in the scene, including inactive ones
+    var allCanvases = UnityEngine.Object.FindObjectsOfType<Canvas>(true);
+    foreach (var c in allCanvases)
+    {
+      if (c.gameObject.name == "PauseCanvas")
+      {
+        bool isActive = c.gameObject.activeInHierarchy;
+        return isActive;
+      }
+    }
+
+    Debug.LogError("DisplayManager.IsPaused: no Canvas named 'PauseCanvas' found!");
+    return false;
   }
 
 
@@ -173,4 +207,51 @@ public class DisplayManager : MonoBehaviour
     // just re-run your existing setup logic
     SetupDisplays();
   }
+
+  /// <summary>
+  /// Call this to immediately show / hide ONLY the Score UI.
+  /// </summary>
+  public void SetTrialManagerScoreUI(bool show)
+  {
+    var tm = FindObjectsOfType<MonoBehaviour>()
+               .FirstOrDefault(mb => mb.GetType().Name.StartsWith("TrialManager"));
+    if (tm == null) return;
+
+    var t = tm.GetType();
+    // 1) set the public bool field
+    var fScore = t.GetField("ShowScoreUI", BindingFlags.Public|BindingFlags.Instance);
+    if (fScore != null) fScore.SetValue(tm, show);
+
+    // 2) also toggle the actual ScoreText component
+    var scoreField = t.GetField("ScoreText", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+    if (scoreField != null)
+    {
+      var txt = scoreField.GetValue(tm) as TMP_Text;
+      if (txt != null)
+        txt.gameObject.SetActive(show);
+    }
+  }
+
+  /// <summary>
+  /// Call this to immediately show / hide ONLY the Feedback UI.
+  /// </summary>
+  public void SetTrialManagerFeedbackUI(bool show)
+  {
+    var tm = FindObjectsOfType<MonoBehaviour>()
+               .FirstOrDefault(mb => mb.GetType().Name.StartsWith("TrialManager"));
+    if (tm == null) return;
+
+    var t = tm.GetType();
+    var fFeed = t.GetField("ShowFeedbackUI", BindingFlags.Public|BindingFlags.Instance);
+    if (fFeed != null) fFeed.SetValue(tm, show);
+
+    var feedField = t.GetField("FeedbackText", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+    if (feedField != null)
+    {
+      var txt = feedField.GetValue(tm) as TMP_Text;
+      if (txt != null)
+        txt.gameObject.SetActive(show);
+    }
+  }
+
 }

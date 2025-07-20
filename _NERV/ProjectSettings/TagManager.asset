@@ -8,6 +8,8 @@ TagManager:
   - SettingsCam
   - SettingsCanvas
   - ExperimenterUI
+  - TrialManager
+  - HumanOverlay
   layers:
   - Default
   - TransparentFX

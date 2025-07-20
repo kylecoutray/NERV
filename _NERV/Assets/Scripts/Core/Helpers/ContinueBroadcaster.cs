@@ -13,6 +13,7 @@ public class ContinueBroadcaster : MonoBehaviour
     [Tooltip("Assign the Continue‐style button on this prefab")]
     public Button OtherContinueButton;
 
+    public Canvas ExpPauseCanvas;
     private BlockPauseController _pauseCtrl;
     private TMP_Text             _sourceLabel;
 
@@ -47,6 +48,7 @@ public class ContinueBroadcaster : MonoBehaviour
         {
             OtherContinueButton.onClick.AddListener(_pauseCtrl.PressContinue);
             OtherContinueButton.gameObject.SetActive(_pauseCtrl.PauseCanvas.gameObject.activeSelf);
+            ExpPauseCanvas.gameObject.SetActive(_pauseCtrl.PauseCanvas.gameObject.activeSelf);
         }
         else
             Debug.LogError("ContinueBroadcaster: OtherContinueButton not assigned!");
@@ -70,6 +72,7 @@ public class ContinueBroadcaster : MonoBehaviour
             && OtherContinueButton.gameObject.activeSelf != isPaused)
         {
             OtherContinueButton.gameObject.SetActive(isPaused);
+            ExpPauseCanvas.gameObject.SetActive(isPaused);
         }
 
         // mirror label text

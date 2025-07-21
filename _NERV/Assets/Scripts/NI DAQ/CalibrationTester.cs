@@ -10,7 +10,13 @@ public class CalibrationTester : MonoBehaviour
     public RectTransform testCursor;
 
     [Header("Device Settings")]
-    public string deviceName = "Dev1"; // or "SimDev1" for NI-MAX
+    public string deviceName = "Dev1"; // or "SimDev1"
+
+    [Header("Simulation")]
+    public bool simulateDAQ = true;
+    public bool simulateByCursor = false; 
+    public float simMinVoltage = -5f;
+    public float simMaxVoltage = 5f;
 
     // Affine mapping coefficients (filled in Start)
     private float aX, bX, aY, bY;
@@ -18,101 +24,116 @@ public class CalibrationTester : MonoBehaviour
     // Single DAQ task handle for ai0 & ai1
     private IntPtr task = IntPtr.Zero;
 
-
     void Start()
     {
-        // --- 1) Load most recent calibration config ---
+        // 1) Load latest map
         string folder = Path.Combine(Application.dataPath, "Resources", "Calibrations");
         if (!Directory.Exists(folder))
         {
             Debug.LogError($"Calibration folder not found at {folder}");
-            enabled = false; return;
+            enabled = false;
+            return;
         }
-        var files = Directory.GetFiles(folder, "*_config.json");
+
+        var files = Directory.GetFiles(folder, "*_map.json");
         if (files.Length == 0)
         {
-            Debug.LogError("No calibration configs found in Resources/Calibrations");
-            enabled = false; return;
+            Debug.LogError("No calibration maps found");
+            enabled = false;
+            return;
         }
-        // pick the newest by write time
-        string latest = files
-            .OrderByDescending(f => File.GetLastWriteTime(f))
-            .First();
-        var map = JsonUtility.FromJson<CalibrationMap>(File.ReadAllText(latest));
 
-        // --- 2) Compute affine fit: screen = a*volt + b ---
-        int n = map.voltagePoints.Length;
-        double sumVx=0, sumPx=0, sumVy=0, sumPy=0;
-        for(int i=0;i<n;i++){
-            sumVx += map.voltagePoints[i].x;
-            sumPx += map.screenPoints[i].x;
-            sumVy += map.voltagePoints[i].y;
-            sumPy += map.screenPoints[i].y;
-        }
-        double mVx = sumVx/n, mPx = sumPx/n, mVy = sumVy/n, mPy = sumPy/n;
-        double numX=0, denX=0, numY=0, denY=0;
-        for(int i=0;i<n;i++){
-            double dvx = map.voltagePoints[i].x - mVx;
-            double dpx = map.screenPoints[i].x - mPx;
-            numX += dvx*dpx; denX += dvx*dvx;
-            double dvy = map.voltagePoints[i].y - mVy;
-            double dpy = map.screenPoints[i].y - mPy;
-            numY += dvy*dpy; denY += dvy*dvy;
-        }
-        aX = (float)(numX/denX);
-        bX = (float)(mPx - aX*mVx);
-        aY = (float)(numY/denY);
-        bY = (float)(mPy - aY*mVy);
-        Debug.Log($"Affine mapping: X = {aX:F3}*volt + {bX:F1}, Y = {aY:F3}*volt + {bY:F1}");
+        string latest = files.OrderByDescending(f => File.GetLastWriteTime(f)).First();
+        Map map = JsonUtility.FromJson<Map>(File.ReadAllText(latest));
 
-        // --- 3) Setup one DAQ task for both channels ---
-        int err = NativeDAQmx.DAQmxCreateTask("", out task);
-        CheckError(err, "CreateTask");
-        // note: "ai0:1" means ai0 and ai1
-        string chans = $"{deviceName}/ai0:1";
-        err = NativeDAQmx.DAQmxCreateAIVoltageChan(
-            task, chans, "",
-            NativeDAQmx.DAQmx_Val_RSE,
-            -5.0, 5.0,
-            NativeDAQmx.DAQmx_Val_Volts,
-            null);
-        CheckError(err, "CreateAIVoltageChan");
-        err = NativeDAQmx.DAQmxStartTask(task);
-        CheckError(err, "StartTask");
+        // pixels per degree average
+        float pd = (map.pixdeg[0] + map.pixdeg[1]) * 0.5f;
+
+        // create screen = a*volt + b
+        aX = map.Xscale * pd;
+        bX = Screen.width  * 0.5f - map.Xscalecenter * map.Xscale * pd;
+        aY = map.Yscale * pd;
+        bY = Screen.height * 0.5f - map.Yscalecenter * map.Yscale * pd;
+
+        Debug.Log($"Loaded '{Path.GetFileName(latest)}' → aX={aX:F3}, bX={bX:F1}, aY={aY:F3}, bY={bY:F1}");
+
+        // 2) DAQ setup if not simulating
+        if (!simulateDAQ)
+        {
+            int err = DAQmxCreateTask("", out task);
+            CheckError(err, "CreateTask");
+
+            string chans = $"{deviceName}/ai0:1";
+            err = DAQmxCreateAIVoltageChan(
+                task, chans, "",
+                DAQmx_Val_RSE,
+                simMinVoltage, simMaxVoltage,
+                DAQmx_Val_Volts,
+                null);
+            CheckError(err, "CreateAIVoltageChan");
+
+            err = DAQmxStartTask(task);
+            CheckError(err, "StartTask");
+        }
+        else
+        {
+            Debug.Log("[CalibrationTester] simulateDAQ ON: skipping NI-DAQmx setup");
+        }
     }
 
     void Update()
     {
-        if (task == IntPtr.Zero) return;
+        Vector2 volts;
 
-        // --- 4) Read both channels at once ---
-        double[] data = new double[2];
-        int sampsRead;
-        int err = NativeDAQmx.DAQmxReadAnalogF64(
-            task,
-            1,                    // one sample per channel
-            1.0,                  // timeout
-            NativeDAQmx.DAQmx_Val_GroupByChannel,
-            data,
-            (uint)data.Length,
-            out sampsRead,
-            IntPtr.Zero);
-        CheckError(err, "ReadAI0&1");
+        if (simulateDAQ)
+        {
+            if (simulateByCursor)
+            {
+                // invert the affine: volt = (pixel - b)/a
+                Vector2 mp = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+                volts.x = (mp.x - bX) / aX;
+                volts.y = (mp.y - bY) / aY;
+            }
+            else
+            {
+                // fixed mid-voltage
+                float mid = (simMinVoltage + simMaxVoltage) * 0.5f;
+                volts = new Vector2(mid, mid);
+            }
+        }
+        else
+        {
+            // real DAQ read
+            double[] data = new double[2];
+            int sampsRead;
+            int err = DAQmxReadAnalogF64(
+                task,
+                1,
+                1.0,
+                DAQmx_Val_GroupByChannel,
+                data,
+                (uint)data.Length,
+                out sampsRead,
+                IntPtr.Zero);
+            CheckError(err, "ReadAI0&1");
+            volts = new Vector2((float)data[0], (float)data[1]);
+        }
 
-        float vx = (float)data[0];
-        float vy = (float)data[1];
+        // apply affine mapping: screenPx = a*volt + b
+        float px = aX * volts.x + bX;
+        float py = aY * volts.y + bY;
 
-        // --- 5) Map voltages → screen and move cursor ---
-        float px = aX * vx + bX;
-        float py = aY * vy + bY;
-        testCursor.anchoredPosition = new Vector2(-px, -py); // Voltage mapping is inverted
+        // set cursor (anchoredPosition origin at canvas center)
+        testCursor.anchoredPosition = new Vector2(
+            px - Screen.width  * 0.5f,
+            py - Screen.height * 0.5f
+        );
     }
 
     void OnDestroy()
     {
-        // --- 6) Clean up ---
         if (task != IntPtr.Zero)
-            NativeDAQmx.DAQmxClearTask(task);
+            DAQmxClearTask(task);
     }
 
     void CheckError(int code, string ctx)
@@ -120,12 +141,4 @@ public class CalibrationTester : MonoBehaviour
         if (code != 0)
             Debug.LogError($"NI-DAQmx Error [{ctx}]: {code}");
     }
-
-    [Serializable]
-    class CalibrationMap
-    {
-        public Vector2[] screenPoints;
-        public Vector2[] voltagePoints;
-    }
 }
-

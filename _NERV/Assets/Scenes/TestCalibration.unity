@@ -335,6 +335,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   testCursor: {fileID: 850665794}
   deviceName: Dev1
+  simulateDAQ: 1
+  simulateByCursor: 1
+  simMinVoltage: -5
+  simMaxVoltage: 5
 --- !u!4 &1110038102
 Transform:
   m_ObjectHideFlags: 0

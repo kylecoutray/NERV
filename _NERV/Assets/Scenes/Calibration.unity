@@ -754,6 +754,8 @@ MonoBehaviour:
   holdSampleInterval: 0.05
   holdStdDev: 0.05
   maxWaitForFixation: 5
+  pixPerDegX: 1
+  pixPerDegY: 1
 --- !u!4 &1244000162
 Transform:
   m_ObjectHideFlags: 0

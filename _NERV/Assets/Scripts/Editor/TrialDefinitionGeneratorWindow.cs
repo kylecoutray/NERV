@@ -256,14 +256,24 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             var row = new List<string> { trialIDPrefix + (t + 1) };
             int blockNum = Mathf.FloorToInt((float)t / trialsPerBlock) + 1;
             row.Add(blockNum.ToString());
-
             foreach (var st in stimStates)
             {
+                // get the config for this state
+                var cfg = stateConfigs[st.Name];
+
+                // 1) StimIndices (unchanged)
                 var idxs = allIndices[st.Name][t];
                 row.Add("\"[" + string.Join(",", idxs) + "]\"");
+
+                // 2) StimLocations (conditional formatting)
                 var locs = allLocs[st.Name][t];
                 var parts = locs.Select(v =>
-                    $"[{Mathf.RoundToInt(v.x)},{Mathf.RoundToInt(v.y)},{Mathf.RoundToInt(v.z)}]");
+                    cfg.randomLocations
+                        // random → round to whole ints
+                        ? $"[{Mathf.RoundToInt(v.x)},{Mathf.RoundToInt(v.y)},{Mathf.RoundToInt(v.z)}]"
+                        // custom → preserve decimals (3‐place precision)
+                        : $"[{v.x:F3},{v.y:F3},{v.z:F3}]"
+                );
                 row.Add("\"[" + string.Join(",", parts) + "]\"");
             }
             outLines.Add(string.Join(",", row));
@@ -330,28 +340,32 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         StateConfig cfg,
         int total)
     {
-        var seq = new List<List<int>>(new List<int>[total]);
+        // 1) Declare seq up front so it's always in scope
+        var seq = new List<List<int>>(Enumerable
+            .Range(0, total)
+            .Select(_ => new List<int>())
+            .ToList());
+
+        // 2) Cue logic: one cue per trial, each index repeated across trials
         if (cfg.isCue)
         {
-            var pool = stimMap.Values.ToList();
-            for (int i = 0; i < total; i++)
-            {
-                var chosen = cfg.randomStim
-                    ? pool.OrderBy(_ => Guid.NewGuid())
-                          .Take(cfg.expectedStimCount)
-                          .ToList()
-                    : new List<int>(cfg.customIndices);
-                // repeat each cue M times
-                var repSeq = new List<int>();
+            // build flat list of each stimIdx × cueRepetitions
+            var flat = new List<int>();
+            foreach (var idx in stimMap.Values)
                 for (int r = 0; r < cfg.cueRepetitions; r++)
-                    repSeq.AddRange(chosen);
-                seq[i] = cfg.randomStim
-                    ? repSeq.OrderBy(_ => Guid.NewGuid()).ToList()
-                    : repSeq;
-            }
+                    flat.Add(idx);
+
+            // shuffle
+            flat = flat.OrderBy(_ => Guid.NewGuid()).ToList();
+
+            // assign exactly one index per trial
+            for (int t = 0; t < total; t++)
+                seq[t] = new List<int> { flat[t] };
+
             return seq;
         }
 
+        // 3) Non‐cue logic (your original code)
         bool[] occurs = Enumerable.Repeat(true, total).ToArray();
         if (cfg.percentage < 100)
         {
@@ -369,15 +383,17 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
                 seq[i] = new List<int>();
             else if (cfg.randomStim)
                 seq[i] = stimMap.Values
-                    .Except(cfg.excludeIndices)
-                    .OrderBy(x => Guid.NewGuid())
-                    .Take(cfg.expectedStimCount)
-                    .ToList();
+                            .Except(cfg.excludeIndices)
+                            .OrderBy(x => Guid.NewGuid())
+                            .Take(cfg.expectedStimCount)
+                            .ToList();
             else
                 seq[i] = new List<int>(cfg.customIndices);
         }
+
         return seq;
     }
+
 
     private List<List<Vector3>> BuildStimLocationsSequence(
         StateConfig cfg,

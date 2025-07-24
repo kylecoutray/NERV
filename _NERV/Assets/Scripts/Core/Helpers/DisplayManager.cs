@@ -49,9 +49,13 @@ public class DisplayManager : MonoBehaviour
     // singleton
     if (I != null) { Destroy(gameObject); return; }
     I = this;
+    if (transform.parent != null)
+      transform.SetParent(null, true);
+
+    DontDestroyOnLoad(gameObject);
 
     // grab the PauseButton once by name
-    _pauseButton = GameObject.Find("PauseButton");
+    if(GameObject.Find("PauseButton") != null) _pauseButton = GameObject.Find("PauseButton");
 
     // re-apply whenever any scene loads
     SceneManager.sceneLoaded += OnSceneLoaded;
@@ -66,6 +70,20 @@ public class DisplayManager : MonoBehaviour
 
   void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
   {
+    // 0) Deactivate everything first (but keep references)
+    if (_humanOverlay    != null) _humanOverlay.SetActive(false);
+    if (_monkeyOverlay   != null) _monkeyOverlay.SetActive(false);
+    
+    // Only kill the experimenter UI when entering TaskSelector (or SingleHuman mode)
+    if (scene.name == "TaskSelector" || CurrentMode == Mode.SingleHuman)
+      if (_experimenterUI != null) _experimenterUI.SetActive(false);
+
+    // grab the PauseButton once by name
+    if(GameObject.Find("PauseButton") != null) _pauseButton = GameObject.Find("PauseButton");
+    // 1) If SingleHuman, nothing more to do
+    if (CurrentMode == Mode.SingleHuman)
+      return;
+
     ActivateDisplays();
     SetupDisplays();
     OnModeChanged?.Invoke(CurrentMode);
@@ -128,6 +146,7 @@ public class DisplayManager : MonoBehaviour
         _monkeyOverlay = Instantiate(monkeyOverlayPrefab);
 
       _monkeyOverlay.SetActive(true);
+      if (GameObject.Find("PauseButton") != null) GameObject.Find("PauseButton").SetActive(false);
       var mc = _monkeyOverlay.GetComponent<Canvas>();
       if (mc != null) mc.targetDisplay = 0;
     }
@@ -157,8 +176,11 @@ public class DisplayManager : MonoBehaviour
         if (canvases.Length == 0)
           Debug.LogError("DisplayManager: experimenterPrefab has no Canvas!");
         else
+        {
           foreach (var c in canvases)
             c.targetDisplay = 1;
+        }
+        _experimenterUI.SetActive(true);
       }
     }
   }

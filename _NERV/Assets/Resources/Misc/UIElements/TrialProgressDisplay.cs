@@ -76,7 +76,6 @@ public class TrialProgressDisplay : MonoBehaviour
         try
         {
             summary = tm.GetTaskSummary();
-            Debug.Log($"TrialProgressDisplay in the TRY");
         }
         catch (Exception)
         {
@@ -140,15 +139,14 @@ public class TrialProgressDisplay : MonoBehaviour
     private IEnumerator InitializeAfterEverything()
     {
         // wait one frame (so TrialManager.Start has already run)
-        Debug.Log("[TPD] Waiting for end of frame…");
         yield return new WaitForEndOfFrame();
-        Debug.Log("[TPD] Now initializing UI updates");
+    
 
         // now it’s safe to grab it
         sm = FindObjectOfType<SessionManager>();
         if (sm == null)
         {
-            Debug.LogError("TrialProgressDisplay: Still no SessionManager after scene load!");
+            Debug.LogError("TrialProgressDisplay: No SessionManager after scene load!");
             yield break;
         }
         // do one initial draw

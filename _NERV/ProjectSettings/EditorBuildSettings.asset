@@ -32,4 +32,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TESTING.unity
     guid: c0daef7f5b7b6415bbf0fd4ae9ab4ab0
+  - enabled: 1
+    path: Assets/Scenes/Rule Adaptive Match 3D.unity
+    guid: 5b783ec6d1c6949c9be4ec46d42718ae
   m_configObjects: {}

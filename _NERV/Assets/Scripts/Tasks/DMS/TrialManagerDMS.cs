@@ -170,7 +170,7 @@ public class TrialManagerDMS : MonoBehaviour
                 _score += PointsPerCorrect;
                 if (!CoinController.Instance.CoinBarWasJustFilled)
                     _audioSrc.PlayOneShot(_correctBeep);
-                LogEvent("AudioPlaying: _correctBeep");
+                LogEvent("AudioPlaying_correctBeep");
                 LogEvent("Success");
                 FeedbackText.text = $"+{PointsPerCorrect}";
             }
@@ -179,7 +179,7 @@ public class TrialManagerDMS : MonoBehaviour
                 _score += PointsPerWrong;
                 UpdateScoreUI();
                 _audioSrc.PlayOneShot(_errorBeep);
-                LogEvent("AudioPlaying: _errorBeep");
+                LogEvent("AudioPlaying_errorBeep");
                 if (answered) { LogEvent("TargetSelected"); LogEvent("Fail"); }
                 else { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";

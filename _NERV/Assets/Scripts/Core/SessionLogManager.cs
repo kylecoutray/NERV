@@ -299,16 +299,6 @@ public class SessionLogManager : MonoBehaviour
             $"Frame: {frame}, {details}"
         );
 
-        // bump the seen‐count for this state
-        int seen = 0;
-        _stateCaptureCounts.TryGetValue(evt, out seen);
-        seen++;
-        _stateCaptureCounts[evt] = seen;
-
-        // capture only during the first N trials
-        if (enableScreenshots && seen <= trialsToCapture)
-            StartCoroutine(CaptureStateScreenshotCoroutine(evt));
-
     }
 
     /// <summary>
@@ -363,6 +353,16 @@ public class SessionLogManager : MonoBehaviour
 
         if (status == "FAILED") Debug.LogWarning($"FAILED TTL!");
         else Debug.Log($"{line}");
+
+        // bump the seen‐count for this state
+        int seen = 0;
+        _stateCaptureCounts.TryGetValue(evt, out seen);
+        seen++;
+        _stateCaptureCounts[evt] = seen;
+
+        // capture only during the first N trials
+        if (enableScreenshots && seen <= trialsToCapture)
+            StartCoroutine(CaptureStateScreenshotCoroutine(evt));
     }
 
 

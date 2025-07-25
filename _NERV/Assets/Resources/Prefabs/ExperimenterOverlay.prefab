@@ -871,7 +871,7 @@ GameObject:
   - component: {fileID: 1931228267801643794}
   - component: {fileID: 3998896489980357078}
   m_Layer: 5
-  m_Name: PauseButton
+  m_Name: ExpPauseButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4590,7 +4590,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3492781400362746727}
   m_HandleRect: {fileID: 5350303066029012962}
   m_Direction: 0
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -5245,7 +5245,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 5075922471018964306}
   m_Direction: 0
   m_Value: 1
-  m_Size: 1
+  m_Size: 0.99999994
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

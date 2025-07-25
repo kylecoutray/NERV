@@ -317,7 +317,7 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine("                _score += PointsPerCorrect;");
                 sb.AppendLine("                if (!CoinController.Instance.CoinBarWasJustFilled)");
                 sb.AppendLine("                    _audioSrc.PlayOneShot(_correctBeep);");
-                sb.AppendLine("                LogEvent(\"AudioPlaying: _correctBeep\");");
+                sb.AppendLine("                LogEvent(\"AudioPlaying_correctBeep\");");
                 sb.AppendLine("                LogEvent(\"Success\");");
                 sb.AppendLine("                FeedbackText.text = $\"+{PointsPerCorrect}\";");
                 sb.AppendLine("            }");
@@ -326,7 +326,7 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine("                _score += PointsPerWrong;");
                 sb.AppendLine("                UpdateScoreUI();");
                 sb.AppendLine("                _audioSrc.PlayOneShot(_errorBeep);");
-                sb.AppendLine("                LogEvent(\"AudioPlaying: _errorBeep\");");
+                sb.AppendLine("                LogEvent(\"AudioPlaying_errorBeep\");");
                 sb.AppendLine("                if (answered) { LogEvent(\"TargetSelected\"); LogEvent(\"Fail\"); }");
                 sb.AppendLine("                else          { LogEvent(\"Timeout\"); LogEvent(\"Fail\"); }");
                 sb.AppendLine("                FeedbackText.text = answered ? \"Wrong!\" : \"Too Slow!\";");

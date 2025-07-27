@@ -133,20 +133,25 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
 
                         cfg.percentage = EditorGUILayout.IntSlider("% Occurrence", cfg.percentage, 0, 100);
                         EditorGUILayout.Space();
+                        cfg.expectedStimCount = Mathf.Max(1,
+                            EditorGUILayout.IntField(
+                                new GUIContent("# Stimuli", "Number of stimuli per trial."),
+                                cfg.expectedStimCount));
+                        
 
-                        cfg.randomStim = EditorGUILayout.Toggle("Random Stimuli", cfg.randomStim);
-                        if (cfg.randomStim)
-                        {
-                            cfg.expectedStimCount = Mathf.Max(1,
-                                EditorGUILayout.IntField(
-                                    new GUIContent("# Stimuli", "Number of random picks per trial."),
-                                    cfg.expectedStimCount));
-                        }
-                        else
-                        {
-                            cfg.customIndices = CSVUtil.DrawIntListField(
-                                "Custom Stim Indices (comma-separated)", cfg.customIndices);
-                        }
+                        cfg.randomStim = EditorGUILayout.Toggle(
+                            new GUIContent("Random Order", "Shuffle selected stimuli each trial."),
+                            cfg.randomStim);
+
+                        // always show custom‑indices field
+                        cfg.customIndices = CSVUtil.DrawIntListField(
+                            "Custom Stim Indices (optional)",
+                            cfg.customIndices);
+
+                        // helper text
+                        EditorGUILayout.HelpBox(
+                            "If you enter any indices above, that exact list will be used each trial.",
+                            MessageType.Info);
 
                         EditorGUILayout.Space();
 
@@ -386,21 +391,34 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             .Select(_ => new List<int>())
             .ToList());
 
-        // 2) Cue logic: one cue per trial, each index repeated across trials
+        // 2) Cue logic: N cues per trial (or custom override)
         if (cfg.isCue)
         {
-            // build flat list of each stimIdx × cueRepetitions
+            // a) Custom list override
+            if (cfg.customIndices != null && cfg.customIndices.Count > 0)
+            {
+                for (int t = 0; t < total; t++)
+                    seq[t] = new List<int>(cfg.customIndices);
+                return seq;
+            }
+
+            // b) Build flat list (S stimuli × repetitions M)
             var flat = new List<int>();
             foreach (var idx in stimMap.Values)
                 for (int r = 0; r < cfg.cueRepetitions; r++)
                     flat.Add(idx);
 
-            // shuffle
+            // shuffle it
             flat = flat.OrderBy(_ => Guid.NewGuid()).ToList();
 
-            // assign exactly one index per trial
+            // c) Now S*M == total * N, so slice into chunks of N per trial
             for (int t = 0; t < total; t++)
-                seq[t] = new List<int> { flat[t] };
+            {
+                seq[t] = flat
+                    .Skip(t * cfg.expectedStimCount)
+                    .Take(cfg.expectedStimCount)
+                    .ToList();
+            }
 
             return seq;
         }
@@ -420,15 +438,34 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         for (int i = 0; i < total; i++)
         {
             if (!occurs[i])
+            {
                 seq[i] = new List<int>();
-            else if (cfg.randomStim)
-                seq[i] = stimMap.Values
-                            .Except(cfg.excludeIndices)
-                            .OrderBy(x => Guid.NewGuid())
-                            .Take(cfg.expectedStimCount)
-                            .ToList();
-            else
+                continue;
+            }
+
+            // 1) Custom override
+            if (cfg.customIndices != null && cfg.customIndices.Count > 0)
+            {
                 seq[i] = new List<int>(cfg.customIndices);
+            }
+            else
+            {
+                // 2) Otherwise pick N either shuffled or sequential
+                var pool = stimMap.Values.Except(cfg.excludeIndices);
+                if (cfg.randomStim)
+                {
+                    seq[i] = pool
+                        .OrderBy(_ => Guid.NewGuid())
+                        .Take(cfg.expectedStimCount)
+                        .ToList();
+                }
+                else
+                {
+                    seq[i] = pool
+                        .Take(cfg.expectedStimCount)
+                        .ToList();
+                }
+            }
         }
 
         return seq;

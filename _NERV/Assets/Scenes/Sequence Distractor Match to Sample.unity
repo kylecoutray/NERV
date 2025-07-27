@@ -982,6 +982,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   resourcePath: Stimuli/Default
   shuffleContainer: {fileID: 1711880412}
+  instanceScale: 0.85
 --- !u!4 &1711880412
 Transform:
   m_ObjectHideFlags: 0

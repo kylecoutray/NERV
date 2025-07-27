@@ -8,10 +8,12 @@ using System.Collections.Generic;
 public class TrialDefinitionGeneratorWindow : EditorWindow
 {
     // Global random for locations to ensure unique sequences
+    private bool headersOnly = false; // toggle for header-only that can be used to generate just the header row
+    // this makes it easier to manually add custom state spawn logic
     private static readonly System.Random rngGlobal = new System.Random();
     private ExperimentDefinition experimentDef;
     private TextAsset stimIndexCSV;
-    private string trialIDPrefix = "WMTEST";
+    private string trialIDPrefix = "WMT_";
     private int practiceTrials = 0; // number of practice trials to prepend
     private int blocks = 1;
     private string outputFolder = "Assets/Resources/Configs";
@@ -31,6 +33,12 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         GUILayout.Label("Generate Trial Definition CSV", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 
+        GUILayout.Space(4);
+        headersOnly = EditorGUILayout.ToggleLeft(
+            new GUIContent(" Generate Headers Only",
+                        "Skip all inputs and math; just output the CSV header row."),
+            headersOnly);
+        EditorGUILayout.Space();
         EditorGUI.BeginChangeCheck();
         experimentDef = (ExperimentDefinition)EditorGUILayout.ObjectField(
             "Experiment Definition", experimentDef, typeof(ExperimentDefinition), false);
@@ -47,117 +55,119 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
         EditorGUILayout.Space();
 
-        // Compute and display trial counts based on stimulus count and cue settings
-        if (experimentDef != null && stimIndexCSV != null)
+        if (!headersOnly)
         {
-            var lines = stimIndexCSV.text
-                .Split(new[] {'\n','\r'}, StringSplitOptions.RemoveEmptyEntries);
-            int stimCount = Math.Max(0, lines.Length - 2);
-
-            // Find cue state config
-            var cueState = experimentDef.States
-                .FirstOrDefault(s => stateConfigs.ContainsKey(s.Name) && stateConfigs[s.Name].isCue);
-
-            if (cueState != null)
+            // Compute and display trial counts based on stimulus count and cue settings
+            if (experimentDef != null && stimIndexCSV != null)
             {
-                var cfgCue = stateConfigs[cueState.Name];
-                int S = stimCount;
-                int M = Mathf.Max(1, cfgCue.cueRepetitions);
-                int N = Mathf.Max(1, cfgCue.expectedStimCount);
+                var lines = stimIndexCSV.text
+                    .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                int stimCount = Math.Max(0, lines.Length - 2);
 
-                if ((S * M) % N == 0)
+                // Find cue state config
+                var cueState = experimentDef.States
+                    .FirstOrDefault(s => stateConfigs.ContainsKey(s.Name) && stateConfigs[s.Name].isCue);
+
+                if (cueState != null)
                 {
-                    int trialsPerBlock = (S * M) / N;
-                    int totalTrials = trialsPerBlock * blocks;
+                    var cfgCue = stateConfigs[cueState.Name];
+                    int S = stimCount;
+                    int M = Mathf.Max(1, cfgCue.cueRepetitions);
+                    int N = Mathf.Max(1, cfgCue.expectedStimCount);
 
-                    EditorGUILayout.LabelField("Stimuli Count", S.ToString());
-                    EditorGUILayout.LabelField("Trials / Block", trialsPerBlock.ToString());
-                    EditorGUILayout.LabelField("Computed Total Trials", totalTrials.ToString());
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox(
-                        "(StimCount * Cue Repetitions) must be divisible by # Cue Stimuli per Trial for balanced design.",
-                        MessageType.Error);
-                }
-            }
-        }
-
-        // State configuration UI
-        if (experimentDef != null)
-        {
-            var stimStates = experimentDef.States
-                .Where(s => s.IsStimulus)
-                .ToList();
-
-            scrollPos = EditorGUILayout.BeginScrollView(
-                scrollPos,
-                GUILayout.Height(400),
-                GUILayout.ExpandWidth(true));
-
-            foreach (var st in stimStates)
-            {
-                if (!stateConfigs.ContainsKey(st.Name))
-                    stateConfigs[st.Name] = new StateConfig();
-
-                var cfg = stateConfigs[st.Name];
-                EditorGUILayout.BeginVertical("box");
-                cfg.foldout = EditorGUILayout.Foldout(cfg.foldout, st.Name);
-                if (cfg.foldout)
-                {
-                    cfg.isCue = EditorGUILayout.Toggle("Is Cue (memory) state", cfg.isCue);
-                    if (cfg.isCue)
+                    if ((S * M) % N == 0)
                     {
-                        cfg.cueRepetitions = Mathf.Max(1,
-                            EditorGUILayout.IntField(
-                                new GUIContent("Cue Repetitions per Stimulus",
-                                              "Repeat each stimulus this many times per block."),
-                                cfg.cueRepetitions));
-                        cfg.expectedStimCount = Mathf.Clamp(
-                            EditorGUILayout.IntField(
-                                new GUIContent("# Cue Stimuli per Trial",
-                                              "Pick this many distinct stimuli each cue trial."),
-                                cfg.expectedStimCount),
-                            1, int.MaxValue);
-                    }
+                        int trialsPerBlock = (S * M) / N;
+                        int totalTrials = trialsPerBlock * blocks;
 
-                    cfg.percentage = EditorGUILayout.IntSlider("% Occurrence", cfg.percentage, 0, 100);
-                    EditorGUILayout.Space();
-
-                    cfg.randomStim = EditorGUILayout.Toggle("Random Stimuli", cfg.randomStim);
-                    if (cfg.randomStim)
-                    {
-                        cfg.expectedStimCount = Mathf.Max(1,
-                            EditorGUILayout.IntField(
-                                new GUIContent("# Stimuli", "Number of random picks per trial."),
-                                cfg.expectedStimCount));
+                        EditorGUILayout.LabelField("Stimuli Count", S.ToString());
+                        EditorGUILayout.LabelField("Trials / Block", trialsPerBlock.ToString());
+                        EditorGUILayout.LabelField("Computed Total Trials", totalTrials.ToString());
                     }
                     else
                     {
-                        cfg.customIndices = CSVUtil.DrawIntListField(
-                            "Custom Stim Indices (comma-separated)", cfg.customIndices);
-                    }
-
-                    EditorGUILayout.Space();
-
-                    cfg.randomLocations = EditorGUILayout.Toggle("Random Locations", cfg.randomLocations);
-                    if (cfg.randomLocations)
-                    {
-                        cfg.locationMin = EditorGUILayout.Vector2Field("Min (X,Y)", cfg.locationMin);
-                        cfg.locationMax = EditorGUILayout.Vector2Field("Max (X,Y)", cfg.locationMax);
-                    }
-                    else
-                    {
-                        cfg.customLocations = CSVUtil.DrawVector3ListField(
-                            "Custom Locs (x,y,z; separated by ;)", cfg.customLocations);
+                        EditorGUILayout.HelpBox(
+                            "(StimCount * Cue Repetitions) must be divisible by # Cue Stimuli per Trial for balanced design.",
+                            MessageType.Error);
                     }
                 }
-                EditorGUILayout.EndVertical();
             }
 
-            EditorGUILayout.EndScrollView();
-        }
+            // State configuration UI
+            if (experimentDef != null)
+            {
+                var stimStates = experimentDef.States
+                    .Where(s => s.IsStimulus)
+                    .ToList();
 
+                scrollPos = EditorGUILayout.BeginScrollView(
+                    scrollPos,
+                    GUILayout.Height(400),
+                    GUILayout.ExpandWidth(true));
+
+                foreach (var st in stimStates)
+                {
+                    if (!stateConfigs.ContainsKey(st.Name))
+                        stateConfigs[st.Name] = new StateConfig();
+
+                    var cfg = stateConfigs[st.Name];
+                    EditorGUILayout.BeginVertical("box");
+                    cfg.foldout = EditorGUILayout.Foldout(cfg.foldout, st.Name);
+                    if (cfg.foldout)
+                    {
+                        cfg.isCue = EditorGUILayout.Toggle("Is Cue (memory) state", cfg.isCue);
+                        if (cfg.isCue)
+                        {
+                            cfg.cueRepetitions = Mathf.Max(1,
+                                EditorGUILayout.IntField(
+                                    new GUIContent("Cue Repetitions per Stimulus",
+                                                "Repeat each stimulus this many times per block."),
+                                    cfg.cueRepetitions));
+                            cfg.expectedStimCount = Mathf.Clamp(
+                                EditorGUILayout.IntField(
+                                    new GUIContent("# Cue Stimuli per Trial",
+                                                "Pick this many distinct stimuli each cue trial."),
+                                    cfg.expectedStimCount),
+                                1, int.MaxValue);
+                        }
+
+                        cfg.percentage = EditorGUILayout.IntSlider("% Occurrence", cfg.percentage, 0, 100);
+                        EditorGUILayout.Space();
+
+                        cfg.randomStim = EditorGUILayout.Toggle("Random Stimuli", cfg.randomStim);
+                        if (cfg.randomStim)
+                        {
+                            cfg.expectedStimCount = Mathf.Max(1,
+                                EditorGUILayout.IntField(
+                                    new GUIContent("# Stimuli", "Number of random picks per trial."),
+                                    cfg.expectedStimCount));
+                        }
+                        else
+                        {
+                            cfg.customIndices = CSVUtil.DrawIntListField(
+                                "Custom Stim Indices (comma-separated)", cfg.customIndices);
+                        }
+
+                        EditorGUILayout.Space();
+
+                        cfg.randomLocations = EditorGUILayout.Toggle("Random Locations", cfg.randomLocations);
+                        if (cfg.randomLocations)
+                        {
+                            cfg.locationMin = EditorGUILayout.Vector2Field("Min (X,Y)", cfg.locationMin);
+                            cfg.locationMax = EditorGUILayout.Vector2Field("Max (X,Y)", cfg.locationMax);
+                        }
+                        else
+                        {
+                            cfg.customLocations = CSVUtil.DrawVector3ListField(
+                                "Custom Locs (x,y,z; separated by ;)", cfg.customLocations);
+                        }
+                    }
+                    EditorGUILayout.EndVertical();
+                }
+
+                EditorGUILayout.EndScrollView();
+            }
+        }
         // Generate button
         if (GUILayout.Button("Generate CSV"))
         {
@@ -170,10 +180,40 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             }
             GenerateTrialDefinitionCSV();
         }
+
     }
 
     private void GenerateTrialDefinitionCSV()
     {
+        if (headersOnly)
+        {
+            // rename locals to avoid conflicts
+            var headerStimStates = experimentDef?.States
+                                    .Where(s => s.IsStimulus)
+                                    .ToList()
+                                ?? new List<StateDefinition>();
+
+            var headerColumns = new List<string> { "TrialID", "BlockCount" };
+            foreach (var st in headerStimStates)
+            {
+                headerColumns.Add(st.Name + "StimIndices");
+                headerColumns.Add(st.Name + "StimLocations");
+            }
+
+            // write just the header
+            if (!Directory.Exists(outputFolder))
+                Directory.CreateDirectory(outputFolder);
+            string headerPath = Path.Combine(outputFolder, $"{acr}_Trial_Def.csv");
+            File.WriteAllLines(headerPath, new[] { string.Join(",", headerColumns) });
+            AssetDatabase.Refresh();
+            EditorUtility.DisplayDialog(
+                "Success",
+                "Header CSV created at:\n" + headerPath,
+                "OK"
+            );
+            return;
+        }
+
         // Parse StimIndex CSV
         var lines = stimIndexCSV.text
             .Split(new[] {'\n','\r'}, StringSplitOptions.RemoveEmptyEntries);

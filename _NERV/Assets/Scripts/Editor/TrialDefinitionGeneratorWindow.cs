@@ -354,7 +354,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         EditorUtility.DisplayDialog("Success", "CSV created at " + path, "OK");
     }
 
-        private string BuildRow(bool practiceID, int practiceIndex, int trialIndex, List<StateDefinition> stimStates, int trialsPerBlock, int totalTrials, Dictionary<string, List<List<int>>> allIndices, Dictionary<string, List<List<Vector3>>> allLocs)
+    private string BuildRow(bool practiceID, int practiceIndex, int trialIndex, List<StateDefinition> stimStates, int trialsPerBlock, int totalTrials, Dictionary<string, List<List<int>>> allIndices, Dictionary<string, List<List<Vector3>>> allLocs)
     {
         var rowList = new List<string>();
         if (practiceID)
@@ -370,11 +370,18 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         }
         foreach (var st in stimStates)
         {
+            // 1) StimIndices
             var idxs = allIndices[st.Name][trialIndex];
             rowList.Add("\"[" + string.Join(",", idxs) + "]\"");
+
+            // 2) StimLocations — fetch the config to know whether to round
             var locs = allLocs[st.Name][trialIndex];
+            var cfg  = stateConfigs[st.Name];                   // <-- HERE
             var parts = locs.Select(v =>
-                $"[{Mathf.RoundToInt(v.x)},{Mathf.RoundToInt(v.y)},{Mathf.RoundToInt(v.z)}]");
+                cfg.randomLocations
+                    ? $"[{Mathf.RoundToInt(v.x)},{Mathf.RoundToInt(v.y)},{Mathf.RoundToInt(v.z)}]"
+                    : $"[{v.x:F3},{v.y:F3},{v.z:F3}]"
+            );
             rowList.Add("\"[" + string.Join(",", parts) + "]\"");
         }
         return string.Join(",", rowList);
@@ -394,7 +401,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         // 2) Cue logic: N cues per trial (or custom override)
         if (cfg.isCue)
         {
-            // a) Custom list override
+            // 1) Custom‑indices override
             if (cfg.customIndices != null && cfg.customIndices.Count > 0)
             {
                 for (int t = 0; t < total; t++)
@@ -402,22 +409,41 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
                 return seq;
             }
 
-            // b) Build flat list (S stimuli × repetitions M)
+            // 2) Build one‑block flat list of each stim × repetitions
             var flat = new List<int>();
             foreach (var idx in stimMap.Values)
                 for (int r = 0; r < cfg.cueRepetitions; r++)
                     flat.Add(idx);
 
-            // shuffle it
+            // 3) Shuffle it
             flat = flat.OrderBy(_ => Guid.NewGuid()).ToList();
 
-            // c) Now S*M == total * N, so slice into chunks of N per trial
+            int N = cfg.expectedStimCount;
+            // 4) Slice into trials, fixing any in‑trial duplicates
             for (int t = 0; t < total; t++)
             {
-                seq[t] = flat
-                    .Skip(t * cfg.expectedStimCount)
-                    .Take(cfg.expectedStimCount)
+                // get the next N entries
+                var slice = flat
+                    .Skip(t * N)
+                    .Take(N)
                     .ToList();
+
+                // remove duplicates
+                var unique = slice.Distinct().ToList();
+
+                // if we lost some to duplication, fill from the remaining pool
+                if (unique.Count < N)
+                {
+                    int need = N - unique.Count;
+                    var pool = stimMap.Values.Except(unique).ToList();
+                    unique.AddRange(
+                        pool
+                        .OrderBy(_ => Guid.NewGuid())
+                        .Take(need)
+                    );
+                }
+
+                seq[t] = unique;
             }
 
             return seq;

@@ -170,6 +170,9 @@ public class TrialManagerMNM : MonoBehaviour
             int pickedIdx = -1;
             
             float reactionT = 0f;
+            // Standardize Trial Timing
+            LogEvent($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
 
             yield return StartCoroutine(WaitForChoice((i, rt) =>
             {
@@ -230,12 +233,6 @@ public class TrialManagerMNM : MonoBehaviour
             // 10) Clean up choice items  
             foreach (var go in choiceItems)
                 Destroy(go);
-
-
-            // Standardize Trial Timing
-            LogEvent("InterTrialInterval");
-            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
-            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
 
             // end global trial timer
             float t1 = Time.realtimeSinceStartup;
@@ -307,7 +304,7 @@ public class TrialManagerMNM : MonoBehaviour
     public bool PauseBetweenBlocks = true;
 
     [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 2.75f;
+    public float MaxChoiceResponseTime = 3f;
     public float FeedbackDuration = 1f;
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;

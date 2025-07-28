@@ -23,15 +23,6 @@ MonoBehaviour:
     IsClearAll: 0
     TTLCode: 0
     PostStateDelay: 0
-  - Name: Idle
-    IsTTL: 0
-    IsStimulus: 0
-    IsDelay: 1
-    IsChoice: 0
-    IsFeedback: 0
-    IsClearAll: 0
-    TTLCode: 0
-    PostStateDelay: 1.75
   - Name: Fixation
     IsTTL: 1
     IsStimulus: 0

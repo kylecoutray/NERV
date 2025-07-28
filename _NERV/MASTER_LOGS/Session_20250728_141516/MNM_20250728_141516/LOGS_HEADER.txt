@@ -1,0 +1,19 @@
+# Run parameters for TrialManagerMNM
+ShowScoreUI=False
+ShowFeedbackUI=False
+UseCoinFeedback=True
+CoinsPerCorrect=2
+PauseBetweenBlocks=True
+MaxChoiceResponseTime=2.75
+FeedbackDuration=1
+PointsPerCorrect=2
+PointsPerWrong=-1
+FixationDuration=1.25
+CueOnDuration=0.5
+Delay1Duration=3
+SampleOnDuration=0.5
+Delay2Duration=0.5
+_currentIndex=0
+_totalBlocks=0
+thisBlock=0
+ChoiceY=1.5

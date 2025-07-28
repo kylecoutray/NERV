@@ -233,10 +233,9 @@ public class TrialManagerMNM : MonoBehaviour
 
 
             // Standardize Trial Timing
-            LogEvent("InterTrialInterval");
-            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            LogEvent($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
             yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
-
+            
             // end global trial timer
             float t1 = Time.realtimeSinceStartup;
 
@@ -307,7 +306,7 @@ public class TrialManagerMNM : MonoBehaviour
     public bool PauseBetweenBlocks = true;
 
     [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 2.75f;
+    public float MaxChoiceResponseTime = 3f;
     public float FeedbackDuration = 1f;
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;

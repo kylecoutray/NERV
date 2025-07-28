@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -22,6 +23,16 @@ public class GenericConfigManager : MonoBehaviour
     [Header("Stimuli Settings")]
     [Tooltip("Folder under Resources/ containing stimulus prefabs.")]
     public string StimuliFolderName = "Stimuli";
+
+    [Header("Optional CSV Overrides (drag in TextAssets)")]
+    [Tooltip("If set, this TextAsset is parsed instead of the Resources file.")]
+    public TextAsset trialDefOverride;
+
+    [Tooltip("If set, this TextAsset is parsed instead of the Resources file.")]
+    public TextAsset stimIndexOverride;
+
+    [Tooltip("If true, waits one frame before loading (useful if files are being swapped at Awake)")]
+    public bool delayOneFrame = false;
 
 
     [HideInInspector]
@@ -53,22 +64,46 @@ public class GenericConfigManager : MonoBehaviour
             if (string.IsNullOrEmpty(Acronym))
                 Debug.LogWarning("[GenericConfigManager] Acronym not detected from TrialManager name.");
         }
-
-        // 2) Load the two CSVs from Resources/Configs/{Acronym}/
-        var defText  = Resources.Load<TextAsset>($"Configs/{Acronym}/{Acronym}_Trial_Def");
-        var stimText = Resources.Load<TextAsset>($"Configs/{Acronym}/{Acronym}_Stim_Index");
-        if (defText == null || stimText == null)
-        {
-            Debug.LogError($"[GenericCFG] Missing CSVs for “{Acronym}” in Resources/Configs/{Acronym}");
-            return;
-        }
-
-        // 3) Parse them
-        LoadStimIndex(stimText);
-        LoadTrialDefs(defText);
-
+        // The rest is continued in Start() method
     }
 
+    private IEnumerator Start()
+    {
+        // optional one-frame delay
+        if (delayOneFrame)
+            yield return null;
+
+        TextAsset defText;
+        TextAsset stimText;
+
+        // 1) Use the inspector override if you've dragged one in
+        if (trialDefOverride != null && stimIndexOverride != null)
+        {
+            defText  = trialDefOverride;
+            stimText = stimIndexOverride;
+        }
+        else if (trialDefOverride != null ^ stimIndexOverride != null)
+        {
+            Debug.LogError("[GenericCFG] You must set both TrialDefOverride AND StimIndexOverride, or neither.");
+            yield break;
+        }
+        else
+        {
+            // 2) Fallback to Resources folder
+            defText  = Resources.Load<TextAsset>($"Configs/{Acronym}/{Acronym}_Trial_Def");
+            stimText = Resources.Load<TextAsset>($"Configs/{Acronym}/{Acronym}_Stim_Index");
+        }
+
+        if (defText == null || stimText == null)
+        {
+            Debug.LogError($"[GenericCFG] Missing CSVs for “{Acronym}” and no valid overrides provided.");
+            yield break;
+        }
+
+        // 3) Parse as before
+        LoadStimIndex(stimText);
+        LoadTrialDefs(defText);
+    }
     void LoadStimIndex(TextAsset asset)
     {
         var lines = asset.text.Split(

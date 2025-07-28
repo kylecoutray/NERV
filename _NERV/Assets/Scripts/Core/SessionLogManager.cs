@@ -480,6 +480,9 @@ public class SessionLogManager : MonoBehaviour
 
         string gitHash = Resources.Load<TextAsset>("git_commit")?.text ?? "unknown";
 
+        // Convert refreshRateRatio to a numeric Hz value
+        var rr = Screen.currentResolution.refreshRateRatio;
+        int refreshHz = Mathf.RoundToInt(rr.numerator / (float)rr.denominator);
 
 
         var m = new SessionManifest()
@@ -490,7 +493,7 @@ public class SessionLogManager : MonoBehaviour
             os = SystemInfo.operatingSystem,
             gpu = SystemInfo.graphicsDeviceName,
             unityVersion = Application.unityVersion,
-            displayRefresh = Screen.currentResolution.refreshRate,
+            displayRefresh = refreshHz,
             targetFrameRate = Application.targetFrameRate,
             gitCommit = gitHash
 

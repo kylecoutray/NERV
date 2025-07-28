@@ -24,10 +24,10 @@ EditorBuildSettings:
     path: Assets/Scenes/DistractorMatchToSample.unity
     guid: db9af5544c08a44fbaff855fa472d889
   - enabled: 1
-    path: Assets/Scenes/Calibration.unity
+    path: Assets/Scenes/EyeTrackingSetup/Calibration.unity
     guid: e4f592ca38e64a8479a6a16697a60128
   - enabled: 1
-    path: Assets/Scenes/TestCalibration.unity
+    path: Assets/Scenes/EyeTrackingSetup/TestCalibration.unity
     guid: 53ccdd618b51af443bc048cf00606731
   - enabled: 1
     path: Assets/Scenes/TESTING.unity

@@ -39,7 +39,11 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        frameRate = Screen.currentResolution.refreshRate;    // get the current screen refresh rate
+        // Convert the new RefreshRate struct to a float Hz value
+        var rr = Screen.currentResolution.refreshRateRatio;
+        frameRate = Mathf.RoundToInt(rr.numerator / (float)rr.denominator);
+        // get the current screen refresh rate
+        
         QualitySettings.vSyncCount = 1;                     // enable V-Sync for accurate stimulus timing
         Application.targetFrameRate = frameRate;            // set target FPS to screen refresh rate
 

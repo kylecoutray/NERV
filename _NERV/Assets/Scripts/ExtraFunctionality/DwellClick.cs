@@ -24,6 +24,7 @@ public class DwellClick : MonoBehaviour
     /// True on the frame a dwell click occurs. Combine with GetMouseButtonDown in TrialManager.
     /// </summary>
     public static bool ClickDownThisFrame { get; private set; }
+    public static Ray LastRay { get; private set; }
 
     private Camera _camera;
     private StimulusID _lastStim;
@@ -140,6 +141,7 @@ public class DwellClick : MonoBehaviour
         }
         // Raycast into scene
         Ray ray = _camera.ScreenPointToRay(screenPos);
+        LastRay = ray;
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             var stim = hit.collider.GetComponentInParent<StimulusID>();

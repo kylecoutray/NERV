@@ -251,7 +251,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 153540618}
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -0.09377683, y: 0.010317504, z: -14.652185}
+  m_LocalPosition: {x: -0.09377683, y: 0.010317504, z: -8.7}
   m_LocalScale: {x: 0.10000001, y: 2, z: 5}
   m_Children: []
   m_Father: {fileID: 33836141}
@@ -551,7 +551,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 349249548}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -2222,6 +2222,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5075922471018964306, guid: aaabcd87cab97427695c6af45cc35b47, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5282686338895481863, guid: aaabcd87cab97427695c6af45cc35b47, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -3061,6 +3065,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Acronym: 
   StimuliFolderName: Stimuli
+  trialDefOverride: {fileID: 0}
+  stimIndexOverride: {fileID: 0}
+  delayOneFrame: 0
   Trials: []
 --- !u!1 &3875502045502713525
 GameObject:
@@ -3959,7 +3966,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5211587736064738643}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.2, z: -9.5}
+  m_LocalPosition: {x: 0, y: 1.2, z: -3}
   m_LocalScale: {x: 0.5, y: 0.45, z: 0.5}
   m_Children:
   - {fileID: 637487198}
@@ -4056,7 +4063,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 1
-  rotationSpeed: 75
+  rotationSpeed: 25
   simulateWithCursor: 0
   gazeCursorName: GazeCursor
   trialManager: {fileID: 1881472296}

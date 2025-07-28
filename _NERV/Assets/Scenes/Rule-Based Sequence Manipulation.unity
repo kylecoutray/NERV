@@ -261,7 +261,7 @@ MonoBehaviour:
   PointsPerWrong: -1
   TrialOnDuration: 1
   FixationDuration: 1
-  CueOnDuration: 1
+  CueOnDuration: 2
   DelayDuration: 1
   _trials: []
   _currentIndex: 0
@@ -314,7 +314,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3521f00cc8a441b0a03c8a7c07235f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useTwoRules: 0
+  useTwoRules: 1
   oneRuleTrials: {fileID: 4900000, guid: 6046b8d57dfbf4deea67698865c4a897, type: 3}
   twoRuleTrials: {fileID: 4900000, guid: 70fb0ed0f4c554de89e75564f10b760f, type: 3}
   stimIndexCsv: {fileID: 4900000, guid: 0e01bcc5d1e3c4b739f99c2fed0dd2c8, type: 3}

@@ -519,7 +519,10 @@ public class TrialManagerRSM : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
+                Ray ray = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastRay
+                    : PlayerCamera.ScreenPointToRay(Input.mousePosition);
+
                 if (Physics.Raycast(ray, out var hit))
                 {
                     // 1) cluster?

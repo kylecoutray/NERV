@@ -427,7 +427,10 @@ public class TrialManagerDMS : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
+                Ray ray = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastRay // If using DwellClick, use its last ray
+                    : PlayerCamera.ScreenPointToRay(Input.mousePosition); // Otherwise we are using the mouse position
+
                 if (Physics.Raycast(ray, out var hit))
                 {
                     var stimID = hit.collider.GetComponent<StimulusID>();

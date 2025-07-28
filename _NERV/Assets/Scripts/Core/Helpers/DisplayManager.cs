@@ -147,6 +147,7 @@ public class DisplayManager : MonoBehaviour
 
       _monkeyOverlay.SetActive(true);
       if (GameObject.Find("PauseButton") != null) GameObject.Find("PauseButton").SetActive(false);
+      if (GameObject.Find("ScoreText") != null) GameObject.Find("ScoreText").SetActive(false);
       var mc = _monkeyOverlay.GetComponent<Canvas>();
       if (mc != null) mc.targetDisplay = 0;
     }

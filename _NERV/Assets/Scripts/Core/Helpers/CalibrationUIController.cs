@@ -27,39 +27,69 @@ public class CalibrationUIController : MonoBehaviour
 
     void OnBrowse()
     {
-#if UNITY_EDITOR
-        // Editor: native file dialog
-        string picked = EditorUtility.OpenFilePanel(
-            "Select Calibration JSON",
-            Application.dataPath,
-            "json"
-        );
-        if (!string.IsNullOrEmpty(picked))
-            pathInput.text = picked;
-#else
-        // Runtime: use SimpleFileBrowser
-        StartCoroutine(ShowLoadDialogCoroutine());
-#endif
+        #if UNITY_EDITOR
+            // Editor: native file dialog
+            string picked = EditorUtility.OpenFilePanel(
+                "Select Calibration JSON",
+                Application.dataPath,
+                "json"
+            );
+            if (!string.IsNullOrEmpty(picked))
+                pathInput.text = picked;
+        #else
+            // Runtime: use SimpleFileBrowser
+            StartCoroutine(ShowLoadDialogCoroutine());
+        #endif
     }
 
     IEnumerator ShowLoadDialogCoroutine()
     {
-        // only show .json files
+        // 1) filter to JSON
         FileBrowser.SetFilters(true, new FileBrowser.Filter("JSON Files", ".json"));
         FileBrowser.SetDefaultFilter(".json");
 
-        // show load dialog: pick files only, single-select
-        yield return FileBrowser.WaitForLoadDialog(
+        // 2) find which display this UI is on
+        var parentCanvas = browseButton.GetComponentInParent<Canvas>();
+        int displayIndex = (parentCanvas != null)
+            ? parentCanvas.targetDisplay
+            : 0;  // fallback to primary
+
+        // 3) start the browser and concurrently schedule our display hack
+        var waitDialog = FileBrowser.WaitForLoadDialog(
             FileBrowser.PickMode.Files,
             false,
             /* initialPath */ null,
             "Select Calibration JSON",
             "Load"
         );
+        StartCoroutine(_AssignBrowserToDisplay(displayIndex));
 
+        // 4) wait for user
+        yield return waitDialog;
+
+        // 5) grab result
         if (FileBrowser.Success && FileBrowser.Result.Length > 0)
             pathInput.text = FileBrowser.Result[0];
     }
+
+    IEnumerator _AssignBrowserToDisplay(int disp)
+    {
+        // wait a couple frames so SimpleFileBrowser can spawn its Canvas
+        yield return null;
+        yield return null;
+
+        // find the FileBrowserCanvas and reassign
+        foreach (var canv in FindObjectsOfType<Canvas>())
+        {
+            if (canv.gameObject.name.Contains("FileBrowser"))
+            {
+                canv.targetDisplay = disp;
+                Debug.Log($"[CalibrationUI] Moved FileBrowser popup to display #{disp}");
+                break;
+            }
+        }
+    }
+
 
     void OnSaveAll()
     {

@@ -202,7 +202,10 @@ public class TrialManagerSDMS : MonoBehaviour
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
 
-            Vector2 clickScreenPos = Input.mousePosition;
+            Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
+                ? DwellClick.LastScreenPos     // gaze-dwell position
+                : Input.mousePosition;         // regular mouse
+
 
             if (answered && UseCoinFeedback)
             {
@@ -472,7 +475,7 @@ public class TrialManagerSDMS : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                 Ray ray = DwellClick.ClickDownThisFrame
+                Ray ray = DwellClick.ClickDownThisFrame
                     ? DwellClick.LastRay // If using DwellClick, use its last ray
                     : PlayerCamera.ScreenPointToRay(Input.mousePosition); // Otherwise we are using the mouse position
                     

@@ -25,6 +25,7 @@ public class DwellClick : MonoBehaviour
     /// </summary>
     public static bool ClickDownThisFrame { get; private set; }
     public static Ray LastRay { get; private set; }
+    public static Vector2 LastScreenPos { get; private set; }
 
     private Camera _camera;
     private StimulusID _lastStim;
@@ -139,6 +140,7 @@ public class DwellClick : MonoBehaviour
             // In Screen Space - Overlay canvas, RectTransform.position = screenPos
             gazeCursor.position = screenPos;
         }
+        LastScreenPos = screenPos;
         // Raycast into scene
         Ray ray = _camera.ScreenPointToRay(screenPos);
         LastRay = ray;

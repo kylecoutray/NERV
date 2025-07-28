@@ -214,8 +214,11 @@ public class TrialManagerMNM : MonoBehaviour
             // 8) Coin feedback (optional)  
             if (answered && UseCoinFeedback)
             {
-                var clickPos = Input.mousePosition;
-                if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickPos);
+                Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastScreenPos     // gaze-dwell position
+                    : Input.mousePosition;         // regular mouse
+
+                if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);
                 else CoinController.Instance.RemoveCoins(1);
             }
 

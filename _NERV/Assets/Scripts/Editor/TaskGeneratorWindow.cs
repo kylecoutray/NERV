@@ -331,7 +331,9 @@ public class TaskGeneratorWindow : EditorWindow
                 sb.AppendLine("                else          { LogEvent(\"Timeout\"); LogEvent(\"Fail\"); }");
                 sb.AppendLine("                FeedbackText.text = answered ? \"Wrong!\" : \"Too Slow!\";");
                 sb.AppendLine("            }");
-                sb.AppendLine("            Vector2 clickScreenPos = Input.mousePosition;");
+                sb.AppendLine("            Vector2 clickScreenPos = DwellClick.ClickDownThisFrame");
+                sb.AppendLine("                ? DwellClick.LastScreenPos     // gaze-dwell position");
+                sb.AppendLine("                : Input.mousePosition;         // regular mouse");
                 sb.AppendLine("            if (pickedIdx >= 0 && UseCoinFeedback)");
                 sb.AppendLine("            {");
                 sb.AppendLine("                if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);");
@@ -606,7 +608,9 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine();
         sb.AppendLine("            if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)");
         sb.AppendLine("            {");
-        sb.AppendLine("                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);");
+        sb.AppendLine("                Ray ray = DwellClick.ClickDownThisFrame");
+        sb.AppendLine("                    ? DwellClick.LastRay // If using DwellClick, use its last ray");
+        sb.AppendLine("                    : PlayerCamera.ScreenPointToRay(Input.mousePosition); // Otherwise we are using the mouse position");
         sb.AppendLine("                if (Physics.Raycast(ray, out var hit))");
         sb.AppendLine("                {");
         sb.AppendLine("                    var stimID = hit.collider.GetComponent<StimulusID>();");

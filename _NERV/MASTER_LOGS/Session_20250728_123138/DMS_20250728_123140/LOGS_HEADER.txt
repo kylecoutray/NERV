@@ -1,0 +1,18 @@
+# Run parameters for TrialManagerDMS
+ShowScoreUI=True
+ShowFeedbackUI=True
+UseCoinFeedback=True
+CoinsPerCorrect=2
+PauseBetweenBlocks=True
+MaxChoiceResponseTime=10
+FeedbackDuration=1
+PointsPerCorrect=2
+PointsPerWrong=-1
+TrialOnDuration=2
+SampleOnDuration=0.5
+SampleOffDuration=0.5
+DistractorOnDuration=0.5
+DistractorOffDuration=2
+_currentIndex=0
+_totalBlocks=0
+thisBlock=0

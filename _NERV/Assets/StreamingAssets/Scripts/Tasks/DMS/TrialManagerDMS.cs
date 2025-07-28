@@ -170,7 +170,7 @@ public class TrialManagerDMS : MonoBehaviour
                 _score += PointsPerCorrect;
                 if (!CoinController.Instance.CoinBarWasJustFilled)
                     _audioSrc.PlayOneShot(_correctBeep);
-                LogEvent("AudioPlaying: _correctBeep");
+                LogEvent("AudioPlaying_correctBeep");
                 LogEvent("Success");
                 FeedbackText.text = $"+{PointsPerCorrect}";
             }
@@ -179,7 +179,7 @@ public class TrialManagerDMS : MonoBehaviour
                 _score += PointsPerWrong;
                 UpdateScoreUI();
                 _audioSrc.PlayOneShot(_errorBeep);
-                LogEvent("AudioPlaying: _errorBeep");
+                LogEvent("AudioPlaying_errorBeep");
                 if (answered) { LogEvent("TargetSelected"); LogEvent("Fail"); }
                 else { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
@@ -427,7 +427,10 @@ public class TrialManagerDMS : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
+                Ray ray = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastRay // If using DwellClick, use its last ray
+                    : PlayerCamera.ScreenPointToRay(Input.mousePosition); // Otherwise we are using the mouse position
+
                 if (Physics.Raycast(ray, out var hit))
                 {
                     var stimID = hit.collider.GetComponent<StimulusID>();

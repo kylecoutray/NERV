@@ -184,7 +184,10 @@ public class TrialManagerDMS : MonoBehaviour
                 else { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
-            Vector2 clickScreenPos = Input.mousePosition;
+            Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
+                ? DwellClick.LastScreenPos     // gaze-dwell position
+                : Input.mousePosition;         // regular mouse
+
             if (pickedIdx >= 0 && UseCoinFeedback)
             {
                 if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);

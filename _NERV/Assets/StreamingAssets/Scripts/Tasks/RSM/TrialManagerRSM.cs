@@ -6,7 +6,6 @@ using TMPro;
 using System.Linq;
 using System;
 
-
 /// <summary>
 /// The structure of this script is as follows:
 /// 1) Core Trial Loop: The main experimental logic is run here.
@@ -24,18 +23,16 @@ using System;
 /// If you have any questions, or need assistance please reach out via
 /// GitHub or email kyle@coutray.com
 /// </summary>
-public class TrialManagerRAM3D : MonoBehaviour
+public class TrialManagerRSM : MonoBehaviour
 {
     // Dictionary for TTL event codes
-    private Dictionary<string,int> TTLEventCodes = new Dictionary<string,int>
+    private Dictionary<string, int> TTLEventCodes = new Dictionary<string, int>
     {
         { "TrialOn", 1 },
-        { "CueOn", 2 },
-        { "Walking", 3 },
-        { "Context", 4 },
-        { "SampleOn", 5 },
-        { "Choice", 6 },
-        { "Feedback", 7 },
+        { "CueOn", 3 },
+        { "TargetOn", 4 },
+        { "Choice", 5 },
+        { "Feedback", 6 },
         { "StartEndBlock", 8 }
     };
 
@@ -56,7 +53,8 @@ public class TrialManagerRAM3D : MonoBehaviour
                     ? PauseController.ShowPause("PRACTICE") // Displays practice if we set up practice sessions. (By making TrialID PRACTICE)
                     : PauseController.ShowPause(lastBlock, _totalBlocks)
                 );
-        };
+        }
+        ;
         // Log the start of our testing block
         LogEvent("StartEndBlock");
 
@@ -75,8 +73,7 @@ public class TrialManagerRAM3D : MonoBehaviour
             var trial = _trials[_currentIndex];
             var spawnedItems = new List<GameObject>();
             int[] lastIdxs = new int[0];
-            fixSphere.SetActive(true);
-
+            int[] cueIdxs = new int[0]; // Used for "correct" logic
             /// ==========[END SETUP]==========
 
             /// === [BEGIN USER-DEFINED STATES LOGIC] ===
@@ -84,81 +81,144 @@ public class TrialManagerRAM3D : MonoBehaviour
             LogEvent("TrialOn");
             yield return StartCoroutine(WaitInterruptable(TrialOnDuration));
 
+            // — FIXATION —
+            LogEvent("Fixation");
+            yield return StartCoroutine(WaitInterruptable(FixationDuration));
+
             // — CUEON —
             LogEventNextFrame("CueOn");
             var idxs1 = trial.GetStimIndices("CueOn");
-           
+            cueIdxs = idxs1; // Store for correct logic
             var locs1 = trial.GetStimLocations("CueOn");
             if (idxs1.Length > 0 && locs1.Length > 0)
             {
                 var goList1 = Spawner.SpawnStimuli(idxs1, locs1);
-
-                foreach (var go in goList1)
-                    AlignSpawnedItemYCenter(go);
-
                 spawnedItems.AddRange(goList1);
                 lastIdxs = idxs1;
             }
 
+            // ─── CUSTOM RULE SPAWN ───
+            if (ruleModeManager.useTwoRules)
+            {
+                // spawn two rules at (-1,0,0) and (1,0,0)
+                var r1 = trial.GetStimIndices("Rule1");
+                var r2 = trial.GetStimIndices("Rule2");
+                
+                if (r1.Length > 0)
+                {
+                    var p1 = PrefabForRule(r1[0]);
+                    if (p1 != null)
+                    {
+                        var go1 = Instantiate(p1, new Vector3(-1f,0f,0f), Quaternion.identity);
+                        Debug.Log($"[RunTrials] Rule1 → {p1.name} @ (-1,0,0)");
+                        spawnedItems.Add(go1);
+                    }
+                }
+                if (r2.Length > 0)
+                {
+                    var p2 = PrefabForRule(r2[0]);
+                    if (p2 != null)
+                    {
+                        var go2 = Instantiate(p2, new Vector3( 1f,0f,0f), Quaternion.identity);
+                        Debug.Log($"[RunTrials] Rule2 → {p2.name} @ (1,0,0)");
+                        spawnedItems.Add(go2);
+                    }
+                }
+            }
+            else
+            {
+                // single‐rule mode: ignore CSV location, always spawn at (0,0,0)
+                var r = trial.GetStimIndices("Rule");
+                if (r.Length > 0)
+                {
+                    var p = PrefabForRule(r[0]);
+                    if (p != null)
+                    {
+                        var go = Instantiate(p, Vector3.zero, Quaternion.identity);
+                        Debug.Log($"[RunTrials] Single Rule → {p.name} @ (0,0,0)");
+                        spawnedItems.Add(go);
+                    }
+                }
+            }
+
+            // ────────────────────────────
             yield return StartCoroutine(WaitInterruptable(CueOnDuration));
 
             // — CUEOFF —
+            foreach (var go in spawnedItems)
+            {
+                Destroy(go); // Destroy all spawned items
+            }
+            spawnedItems.Clear();
             LogEvent("CueOff");
             Spawner.ClearAll();
 
             yield return null;
 
-            // — WALKING —
-            LogEvent("Walking");
+            // — DELAY —
+            LogEvent("Delay");
+            yield return StartCoroutine(WaitInterruptable(DelayDuration));
 
-            // — CONTEXT —
-            var idxs2 = trial.GetStimIndices("Context");
-            int contextType = idxs2[0]; //stores the match or nonmatch flash type
+            // Custom logic for this game.
+            // — TARGETON + WRONGTARGETON (merged) —
+            LogEventNextFrame("TargetOn");
 
-            //prepare and wait for the midpoint flash
-            midPointFlash.contextType = contextType;
-            midPointFlash.FlashDone = false;
-            midPointFlash.GetComponent<Collider>().enabled = true;
-            yield return new WaitUntil(() => midPointFlash.FlashDone);
-            LogEventNextFrame("Context");
+            // 1) get correct & wrong data
+            var correctIdxs = trial.GetStimIndices("TargetOn");
+            cueIdxs = correctIdxs;
+            var correctLocs = trial.GetStimLocations("TargetOn");
 
-           
-            var locs2 = trial.GetStimLocations("Context");
-            if (idxs2.Length > 0 && locs2.Length > 0)
+            var wrongIdxs = trial.GetStimIndices("WrongTargetOn");
+            var wrongLocs = trial.GetStimLocations("WrongTargetOn");
+
+            // debug
+            Debug.Log($"Spawning {correctIdxs.Length} correct + {wrongIdxs.Length} wrong");
+
+            // 2) merge arrays
+            int total = correctIdxs.Length + wrongIdxs.Length;
+            int[] allIdxs   = new int[total];
+            Vector3[] allLocs = new Vector3[total];
+            int w = 0;
+            for (int i = 0; i < correctIdxs.Length;  i++, w++) { allIdxs[w] = correctIdxs[i]; allLocs[w] = correctLocs[i]; }
+            for (int i = 0; i < wrongIdxs.Length;    i++, w++) { allIdxs[w] = wrongIdxs[i];   allLocs[w]   = wrongLocs[i];   }
+
+            // 3) one spawn call
+            var goList = Spawner.SpawnStimuli(allIdxs, allLocs);
+            spawnedItems.AddRange(goList);
+
+            // 4) split out the exact GameObjects for each cluster
+            var correctGos = new List<GameObject>();
+            var wrongGos   = new List<GameObject>();
+            for (int i = 0; i < goList.Count; i++)
             {
-                var goList2 = Spawner.SpawnStimuli(idxs2, locs2);
-                spawnedItems.AddRange(goList2);
-                lastIdxs = idxs2;
+                if (i < correctIdxs.Length) correctGos.Add(goList[i]);
+                else                         wrongGos.Add(goList[i]);
             }
+
+            // 5) build the hitboxes around *those* objects
+            CreateClusterHitbox(
+                correctGos.Select(go => go.transform.position).ToArray(),
+                correctGos,
+                true
+            );
+            CreateClusterHitbox(
+                wrongGos.Select(go => go.transform.position).ToArray(),
+                wrongGos,
+                false
+            );
 
             yield return null;
 
-            // — SAMPLEON —
-            LogEventNextFrame("SampleOn");
-            var idxs3 = trial.GetStimIndices("SampleOn");
 
-            int[] sampleIdxs = idxs3;
-
-            var locs3 = trial.GetStimLocations("SampleOn");
-            if (idxs3.Length > 0 && locs3.Length > 0)
-            {
-                var goList3 = Spawner.SpawnStimuli(idxs3, locs3);
-
-                spawnedItems.AddRange(goList3);
-                lastIdxs = idxs3;
-            }
-
-            yield return null;
 
             // — CHOICE —
             LogEvent("Choice");
-            fixSphere.SetActive(false);
-            bool answered   = false;
-            int  pickedIdx  = -1;
+            bool answered = false;
+            int pickedIdx = -1;
             float reactionT = 0f;
             yield return StartCoroutine(WaitForChoice((i, rt) =>
             {
-                answered  = true;
+                answered = true;
                 pickedIdx = i;
                 reactionT = rt;
             }));
@@ -171,18 +231,18 @@ public class TrialManagerRAM3D : MonoBehaviour
 
             // — FEEDBACK —
             LogEvent("Feedback");
+            bool correct = answered && cueIdxs.Contains(pickedIdx);
 
-            // — Feedback and Beep —
-            // NEW for RAM3D
-            int correctIdx = (contextType == 0)
-                             ? sampleIdxs[0] // Match
-                             : sampleIdxs[1]; // Non-match
-
-            bool correct = answered && pickedIdx == correctIdx;
-
-            //Flash Feedback
-            if (targetGO != null)
+            if (_lastClickedCluster != null)
+            {
+                StartCoroutine(FlashClusterFeedback(_lastClickedCluster, correct));
+                _lastClickedCluster = null;
+            }
+            else if (targetGO != null)
+            {
                 StartCoroutine(FlashFeedback(targetGO, correct));
+            }
+
 
             if (correct)
             {
@@ -201,20 +261,16 @@ public class TrialManagerRAM3D : MonoBehaviour
                 _audioSrc.PlayOneShot(_errorBeep);
                 LogEvent("AudioPlaying_errorBeep");
                 if (answered) { LogEvent("TargetSelected"); LogEvent("Fail"); }
-                else          { LogEvent("Timeout"); LogEvent("Fail"); }
+                else { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
-            
-            Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
-                ? DwellClick.LastScreenPos     // gaze-dwell position
-                : Input.mousePosition;         // regular mouse
-
+            Vector2 clickScreenPos = Input.mousePosition;
             if (pickedIdx >= 0 && UseCoinFeedback)
             {
                 if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);
-                else         CoinController.Instance.RemoveCoins(1);
+                else CoinController.Instance.RemoveCoins(1);
             }
-            else if(UseCoinFeedback)
+            else if (UseCoinFeedback)
                 CoinController.Instance.RemoveCoins(1);
 
             UpdateScoreUI();
@@ -223,13 +279,9 @@ public class TrialManagerRAM3D : MonoBehaviour
 
             yield return null;
 
-            // — RESET —
+            // the stuff below is because of the IsClearAll checkmark
             LogEvent("Reset");
-
-            //restore camera
-            // restore camera
-            PlayerCamera.transform.position = cameraStartPos;
-            PlayerCamera.transform.rotation = cameraStartRot;
+            ClearClusters();
             Spawner.ClearAll();
 
             yield return null;
@@ -243,7 +295,7 @@ public class TrialManagerRAM3D : MonoBehaviour
 
             //Block Handling
             thisBlock = trial.BlockCount;
-            int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex+1].BlockCount : -1;
+            int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;
 
 
             // SUMMARY Handling
@@ -288,10 +340,10 @@ public class TrialManagerRAM3D : MonoBehaviour
     #region Dependencies and Variables
     [Header("Dependencies (auto-wired)")]
     public DependenciesContainer Deps;
-    private Camera   PlayerCamera;
-    private StimulusSpawner  Spawner;
-    private TMPro.TMP_Text   FeedbackText;
-    private TMPro.TMP_Text   ScoreText;
+    private Camera PlayerCamera;
+    private StimulusSpawner Spawner;
+    private TMPro.TMP_Text FeedbackText;
+    private TMPro.TMP_Text ScoreText;
     private GameObject CoinUI;
     private BlockPauseController PauseController;
 
@@ -312,8 +364,10 @@ public class TrialManagerRAM3D : MonoBehaviour
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;
 
-    public float TrialOnDuration = 3f;
-    public float CueOnDuration = 3f;
+    public float TrialOnDuration = 1f;
+    public float FixationDuration = 1f;
+    public float CueOnDuration = 1f;
+    public float DelayDuration = 1f;
 
     [Header("Helper Variables")]
     public List<TrialData> _trials;
@@ -337,8 +391,6 @@ public class TrialManagerRAM3D : MonoBehaviour
         public int DroppedFrames;
     }
     private List<TrialResult> _trialResults = new List<TrialResult>();
-    public event Action<string> OnLogEventInstance;
-
     private float _trialStartTime;
     private int _trialStartFrame;
 
@@ -346,15 +398,16 @@ public class TrialManagerRAM3D : MonoBehaviour
     private int _trialsCompleted = 0;
     public event Action OnTrialStart;
 
-    // for camera reset logic
-    private Vector3 cameraStartPos;
-    private Quaternion cameraStartRot;
+    [Header("Rule Prefabs (drag your RA/RB/RC here)")]
+    public GameObject prefabRA;
+    public GameObject prefabRB;
+    public GameObject prefabRC;
+    private List<GameObject> _clusterHitboxes = new List<GameObject>();
+    private ClusterCollider _lastClickedCluster;
 
-    [Header("Midpoint Flash")]
-    [SerializeField] private MidPointFlash midPointFlash;
-    private bool _collisionOccurred;
-    private int _collisionIndex;
-    public GameObject fixSphere;
+    [Header("── Rule Mode ──")]
+    [Tooltip("Drag your RuleModeManager GameObject here")]
+    public RuleModeManager ruleModeManager;
 
     #endregion
 
@@ -374,23 +427,21 @@ public class TrialManagerRAM3D : MonoBehaviour
                 .AddComponent<GenericConfigManager>();
         }
 
-       Debug.Log("Running TrialManagerRAM3D Start()");
+        Debug.Log("Running TrialManagerRSM Start()");
         // Auto-grab everything from the one DependenciesContainer in the scene
         if (Deps == null)
             Deps = FindObjectOfType<DependenciesContainer>();
 
         // Now assign local refs
-        PlayerCamera    = Deps.MainCamera;
-        Spawner         = Deps.Spawner;
-        FeedbackText    = Deps.FeedbackText;
-        ScoreText       = Deps.ScoreText;
-        CoinUI          = Deps.CoinUI;
+        PlayerCamera = Deps.MainCamera;
+        Spawner = Deps.Spawner;
+        FeedbackText = Deps.FeedbackText;
+        ScoreText = Deps.ScoreText;
+        CoinUI = Deps.CoinUI;
         PauseController = Deps.PauseController;
 
-        cameraStartPos  = PlayerCamera.transform.position;
-        cameraStartRot  = PlayerCamera.transform.rotation;
 
-        _trials       = GenericConfigManager.Instance.Trials;
+        _trials = GenericConfigManager.Instance.Trials;
         _currentIndex = 0;
         _taskAcronym = GetType().Name.Replace("TrialManager", "");
 
@@ -402,15 +453,15 @@ public class TrialManagerRAM3D : MonoBehaviour
 
         // UI Loads
         UpdateScoreUI();
-        _audioSrc     = GetComponent<AudioSource>();
-        _correctBeep  = Resources.Load<AudioClip>("AudioClips/positiveBeep");
-        _errorBeep    = Resources.Load<AudioClip>("AudioClips/negativeBeep");
+        _audioSrc = GetComponent<AudioSource>();
+        _correctBeep = Resources.Load<AudioClip>("AudioClips/positiveBeep");
+        _errorBeep = Resources.Load<AudioClip>("AudioClips/negativeBeep");
         _coinBarFullBeep = Resources.Load<AudioClip>("AudioClips/completeBar");
 
         // CoinController setup
-        if (CoinUI     != null) CoinUI.SetActive(UseCoinFeedback);
-        if (FeedbackText!= null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
-        if (ScoreText   != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+        if (CoinUI != null) CoinUI.SetActive(UseCoinFeedback);
+        if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
+        if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
         CoinController.Instance.OnCoinBarFilled += () => _audioSrc.PlayOneShot(_coinBarFullBeep);
         StartCoroutine(WarmUpAndThenRun()); // Preloads all stimuli first, then starts the RunTrials() loop
     }
@@ -421,14 +472,14 @@ public class TrialManagerRAM3D : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.S)) // Toggle Score UI
             {
-                ShowScoreUI    = !ShowScoreUI;
+                ShowScoreUI = !ShowScoreUI;
                 ShowFeedbackUI = !ShowFeedbackUI;
-                if (ScoreText    != null) ScoreText.gameObject.SetActive(ShowScoreUI);
+                if (ScoreText != null) ScoreText.gameObject.SetActive(ShowScoreUI);
                 if (FeedbackText != null) FeedbackText.gameObject.SetActive(ShowFeedbackUI);
             }
 
             if (Input.GetKeyDown(KeyCode.P) && _inPause == false) // Pause the scene
-            _pauseRequested = true;
+                _pauseRequested = true;
         }
     }
     #endregion
@@ -437,42 +488,6 @@ public class TrialManagerRAM3D : MonoBehaviour
     // These functions are separated out for clarity and included for Task customizability.
     // ==========================================================
     #region Helper Functions
-    
-    // called by SimpleFPS
-    public void RegisterCollision(int idx)
-    {
-        if (!_collisionOccurred)
-        {
-            _collisionOccurred = true;
-            _collisionIndex = idx;
-        }
-    }
-
-
-    //Helper to align a GameObject’s visual center to camera Y
-    void AlignSpawnedItemYCenter(GameObject go)
-    {
-        var renderers = go.GetComponentsInChildren<Renderer>();
-        if (renderers.Length == 0) return;
-
-        // Compute combined bounds
-        Bounds bounds = renderers[0].bounds;
-        for (int i = 1; i < renderers.Length; i++)
-            bounds.Encapsulate(renderers[i].bounds);
-
-        // World‑space Y of model’s center
-        float objectCenterY = bounds.center.y;
-
-        // World‑space Y of camera’s center
-        float cameraCenterY = Camera.main.transform.position.y;
-
-        // Offset to apply
-        float deltaY = cameraCenterY - objectCenterY;
-
-        // Move only on Y axis
-        go.transform.position += new Vector3(0f, deltaY - 0.05f, 0f);
-    }
-
 
     IEnumerator ShowFeedback()
     {
@@ -489,7 +504,6 @@ public class TrialManagerRAM3D : MonoBehaviour
 
     private IEnumerator WaitForChoice(System.Action<int, float> callback)
     {
-        _collisionOccurred = false;
         float startTime = Time.time;
         while (Time.time - startTime < MaxChoiceResponseTime)
         {
@@ -503,12 +517,36 @@ public class TrialManagerRAM3D : MonoBehaviour
             }
             _inPause = false;
 
-            if (_collisionOccurred)
+            if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                float rt = Time.time - startTime;
-                callback(_collisionIndex, rt);
-                yield break;
+                Ray ray = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastRay
+                    : PlayerCamera.ScreenPointToRay(Input.mousePosition);
+
+                if (Physics.Raycast(ray, out var hit))
+                {
+                    // 1) cluster?
+                    if (hit.collider.TryGetComponent<ClusterCollider>(out var cc))
+                    {
+                        _lastClickedCluster = cc;
+                        float rt = Time.time - startTime;
+                        // correct cluster → representativeIdx; wrong → -1
+                        callback(cc.isCorrect ? cc.representativeIdx : -1, rt);
+                        yield break;
+                    }
+
+                    // 2) individual stimulus
+                    _lastClickedCluster = null;
+                    var stimID = hit.collider.GetComponent<StimulusID>();
+                    if (stimID != null)
+                    {
+                        float rt = Time.time - startTime;
+                        callback(stimID.Index, rt);
+                        yield break;
+                    }
+                }
             }
+
             yield return null;
         }
         callback(-1, MaxChoiceResponseTime);
@@ -519,7 +557,6 @@ public class TrialManagerRAM3D : MonoBehaviour
     {
         // This is for ExtraFunctionality scripts
         BroadcastMessage("OnLogEvent", label, SendMessageOptions.DontRequireReceiver);
-        OnLogEventInstance?.Invoke(label);
 
         if (_currentIndex >= _trials.Count) // This is for post RunTrials Log Calls. 
         {
@@ -576,8 +613,8 @@ public class TrialManagerRAM3D : MonoBehaviour
         var originals = renderers.Select(r => r.material.color).ToArray();
         Color flashCol = correct ? Color.green : Color.red;
 
-        const int   flashes = 1;
-        const float interval = 0.3f;  
+        const int flashes = 1;
+        const float interval = 0.3f;
 
         for (int f = 0; f < flashes; f++)
         {
@@ -668,18 +705,106 @@ public class TrialManagerRAM3D : MonoBehaviour
         yield return new WaitForSeconds(0.1f); // give GPU/Unity a moment to breathe
         yield return StartCoroutine(RunTrials());
     }
+
+    /// <summary>
+    /// Returns the prefab corresponding to rule index 1→RA, 2→RB, 3→RC.
+    /// </summary>
+    private GameObject PrefabForRule(int idx)
+    {
+        switch (idx)
+        {
+            case 1: return prefabRA;
+            case 2: return prefabRB;
+            case 3: return prefabRC;
+            default: return null;
+        }
+    }
+
+
+    /// <summary>
+    /// Builds a trigger‐only BoxCollider around the given world positions,
+    /// tags it correct/incorrect, and remembers the exact GameObjects.
+    /// </summary>
+    private void CreateClusterHitbox(
+        Vector3[] samplePoints,
+        List<GameObject> clusterGos,
+        bool isCorrect
+    )
+    {
+        var go = new GameObject(isCorrect ? "CorrectCluster" : "WrongCluster");
+        go.transform.parent = this.transform;
+
+        // compute bounds from the sample positions
+        var min = samplePoints[0];
+        var max = samplePoints[0];
+        for (int i = 1; i < samplePoints.Length; i++)
+        {
+            min = Vector3.Min(min, samplePoints[i]);
+            max = Vector3.Max(max, samplePoints[i]);
+        }
+
+        // position & collider
+        go.transform.position = (min + max) * 0.5f;
+        var box = go.AddComponent<BoxCollider>();
+        box.isTrigger = true;
+        box.size = new Vector3(
+            max.x - min.x + 0.5f,
+            max.y - min.y + 0.5f,
+            1f
+        );
+
+        // attach and configure ClusterCollider
+        var cc = go.AddComponent<ClusterCollider>();
+        cc.clusterObjects = clusterGos;
+        cc.isCorrect      = isCorrect;
+
+        // record for later cleanup
+        _clusterHitboxes.Add(go);
+    }
+
+    private void ClearClusters()
+    {
+        foreach (var go in _clusterHitboxes)
+            if (go != null) Destroy(go);
+        _clusterHitboxes.Clear();
+    }
+
+    private IEnumerator FlashClusterFeedback(ClusterCollider cluster, bool correct)
+    {
+        // gather all renderers from the exact GameObjects
+        var renderers = cluster.clusterObjects
+            .SelectMany(go => go.GetComponentsInChildren<Renderer>())
+            .ToArray();
+
+        var originals = renderers.Select(r => r.material.color).ToArray();
+        Color flashCol = correct ? Color.green : Color.red;
+        const int flashes = 1;
+        const float interval = 0.3f;
+
+        for (int f = 0; f < flashes; f++)
+        {
+            foreach (var r in renderers) r.material.color = flashCol;
+            yield return StartCoroutine(WaitInterruptable(interval));
+
+            for (int i = 0; i < renderers.Length; i++)
+                renderers[i].material.color = originals[i];
+            yield return StartCoroutine(WaitInterruptable(interval));
+        }
+    }
+
+
+
         #endregion
 }
-public enum TrialStateRAM3D
+public enum TrialStateRSM
 {
     TrialOn,
+    Fixation,
     CueOn,
     CueOff,
-    Walking,
-    Context,
-    SampleOn,
+    Delay,
+    TargetOn,
     Choice,
     Feedback,
-    Reset,
 }
 

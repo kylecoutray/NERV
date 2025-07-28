@@ -1,0 +1,6 @@
+TrialsTotal,Accuracy,MeanRT_ms
+2,0.5,5808.294
+
+TrialIndex,Correct,ReactionTimeMs
+1,True,1616.588
+2,False,10000

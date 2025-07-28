@@ -1,0 +1,37 @@
+{
+    "startEpoch": 1753723892,
+    "startTime": "2025-07-28 17:31:32",
+    "sessionName": "Session",
+    "os": "Mac OS X 15.5.0",
+    "gpu": "Apple M1 Pro",
+    "unityVersion": "2022.3.62f1",
+    "displayRefresh": 60,
+    "targetFrameRate": 60,
+    "gitCommit": "8301ff8273ada0f0e430746e12975460a2cff11f",
+    "fileHashes": [
+        {
+            "fileName": "TrialManagerDMS_CODE.txt",
+            "hash": "dee6f1011bb8d7f49b62fe9433c1808b10001049a4dbf6228ab5099960bb1c3a"
+        },
+        {
+            "fileName": "DMS_Trial_Def.csv",
+            "hash": "0181f0f06d9aba9fbdeeb24aa8568ec8d01378a72c0e69b2d4cb00bba9777545"
+        },
+        {
+            "fileName": "DMS_Stim_Index.csv",
+            "hash": "d90bc3b0810c48019b436c6cc296cdacad4b971e16b9a71e64202121b80a8c60"
+        },
+        {
+            "fileName": "TrialManagerMNM_CODE.txt",
+            "hash": "8110dc17f3e6566e66efafcaaf74b9cbd52245a00d3a35c006492ec39d3c761c"
+        },
+        {
+            "fileName": "MNM_Trial_Def.csv",
+            "hash": "87cad5c911fac5a05fa54b7914474f2126da664a0bbe6e4462e181e628954e40"
+        },
+        {
+            "fileName": "MNM_Stim_Index.csv",
+            "hash": "d90bc3b0810c48019b436c6cc296cdacad4b971e16b9a71e64202121b80a8c60"
+        }
+    ]
+}

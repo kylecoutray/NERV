@@ -291,6 +291,11 @@ public class TrialManagerRSM : MonoBehaviour
 
             yield return null;
 
+            // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
+
             // End global trial timer
             float t1 = Time.realtimeSinceStartup;
 

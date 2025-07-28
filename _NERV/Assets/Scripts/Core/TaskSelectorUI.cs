@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using TMPro;
+using System.Linq;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -71,7 +72,11 @@ public class TaskSelectorUI : MonoBehaviour
         ControlsUISetup();
 
         // 0) Build your toggles
-        foreach (var def in Resources.LoadAll<ExperimentDefinition>("ExperimentDefinitions"))
+        var allDefs = Resources.LoadAll<ExperimentDefinition>("ExperimentDefinitions");
+        var excluded = Resources.LoadAll<ExperimentDefinition>("ExperimentDefinitions/ExcludeFromBuild");
+
+        // Filter so only allowed definitions get toggles
+        foreach (var def in allDefs.Except(excluded))
         {
             var go = Instantiate(TogglePrefab, ToggleContainer);
             var tt = go.GetComponent<TaskToggle>();

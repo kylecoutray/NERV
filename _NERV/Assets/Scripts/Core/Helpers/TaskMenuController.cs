@@ -20,8 +20,12 @@ public class TaskMenuController : MonoBehaviour
         if (_ui == null)
             Debug.LogError("[TaskMenuController] TaskSelectorUI not found in scene!");
 
-        // load all defs once
-        _allDefs = Resources.LoadAll<ExperimentDefinition>("ExperimentDefinitions");
+        // load all ExperimentDefinitions
+        var allDefs = Resources.LoadAll<ExperimentDefinition>("ExperimentDefinitions");
+        var excluded = Resources.LoadAll<ExperimentDefinition>("ExperimentDefinitions/ExcludeFromBuild");
+
+        // filter out the excluded ones by reference (ensures no duplicates)
+        _allDefs = allDefs.Except(excluded).ToArray();
 
         // uncheck this if you want to know how many Exp defs you have -- im omitting to have a cool "Welcome" Debug lol
         // Debug.Log($"[TaskMenuController] Loaded {_allDefs.Length} ExperimentDefinitions");

@@ -22,7 +22,7 @@ MonoBehaviour:
     IsFeedback: 0
     IsClearAll: 0
     TTLCode: 1
-    PostStateDelay: 3
+    PostStateDelay: 0
   - Name: CueOn
     IsTTL: 1
     IsStimulus: 1

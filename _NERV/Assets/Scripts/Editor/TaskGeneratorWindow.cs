@@ -363,6 +363,11 @@ public class TaskGeneratorWindow : EditorWindow
         }
 
         // Normal increment if not Reset
+        sb.AppendLine("            // Standardize Trial Timing");
+        sb.AppendLine("            LogEvent(\"InterTrialInterval\");");
+        sb.AppendLine("            Debug.Log($" +"[TrialManager{acr}] InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s);");
+        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));");
+
         sb.AppendLine("            // End global trial timer");
         sb.AppendLine("            float t1 = Time.realtimeSinceStartup;");
         sb.AppendLine();
@@ -448,7 +453,7 @@ public class TaskGeneratorWindow : EditorWindow
 
         // Timing & Scoring
         sb.AppendLine("    [Header(\"Timing & Scoring\")]");
-        sb.AppendLine("    public float MaxChoiceResponseTime = 10f;");
+        sb.AppendLine("    public float MaxChoiceResponseTime = 3f;");
         sb.AppendLine("    public float FeedbackDuration = 1f;");
         sb.AppendLine("    public int PointsPerCorrect = 2;");
         sb.AppendLine("    public int PointsPerWrong = -1;");

@@ -38,7 +38,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.020096852, g: 0.020066917, b: 0.020088982, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -104,7 +103,7 @@ NavMeshSettings:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_BuildSettings:
-    serializedVersion: 2
+    serializedVersion: 3
     agentTypeID: 0
     agentRadius: 0.5
     agentHeight: 2
@@ -117,7 +116,7 @@ NavMeshSettings:
     cellSize: 0.16666667
     manualTileSize: 0
     tileSize: 256
-    accuratePlacement: 0
+    buildHeightMesh: 0
     maxJobWorkers: 0
     preserveTilesOutsideBounds: 0
     debug:
@@ -255,11 +254,11 @@ MonoBehaviour:
   UseCoinFeedback: 1
   CoinsPerCorrect: 2
   PauseBetweenBlocks: 1
-  MaxChoiceResponseTime: 10
+  MaxChoiceResponseTime: 3
   FeedbackDuration: 1
   PointsPerCorrect: 2
   PointsPerWrong: -1
-  TrialOnDuration: 1
+  TrialOnDuration: 0
   FixationDuration: 1
   CueOnDuration: 2
   DelayDuration: 1
@@ -278,12 +277,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 484176313}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &689521953
 GameObject:
@@ -325,23 +325,33 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 689521953}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.22604027, y: 2.7030182, z: -3.7071352}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1490149258
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 267795560422106748, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: m_Name
       value: Dependencies
+      objectReference: {fileID: 0}
+    - target: {fileID: 1278661331159371955, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4475256143286994078, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4690493371694339712, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: m_RootOrder
@@ -507,7 +517,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7476013745092199760, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_PresetInfoIsWorld
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: be657328d3d53400c803a38d106b9d45, type: 3}
 --- !u!114 &1490149259 stripped
 MonoBehaviour:
@@ -520,3 +537,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e2c5c1b8aa8148c9b82c64caec67540, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1660057539 &9223372036854775807
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 1490149258}
+  - {fileID: 484176316}
+  - {fileID: 689521955}

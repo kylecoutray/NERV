@@ -204,7 +204,7 @@ public class TrialManagerRAM3D : MonoBehaviour
                 else          { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
-            
+
             Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
                 ? DwellClick.LastScreenPos     // gaze-dwell position
                 : Input.mousePosition;         // regular mouse
@@ -233,6 +233,11 @@ public class TrialManagerRAM3D : MonoBehaviour
             Spawner.ClearAll();
 
             yield return null;
+
+            // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
 
             // End global trial timer
             float t1 = Time.realtimeSinceStartup;
@@ -307,7 +312,7 @@ public class TrialManagerRAM3D : MonoBehaviour
     public bool PauseBetweenBlocks = true;
 
     [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 10f;
+    public float MaxChoiceResponseTime = 11f;
     public float FeedbackDuration = 1f;
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;

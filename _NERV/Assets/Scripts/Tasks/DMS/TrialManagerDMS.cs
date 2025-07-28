@@ -80,7 +80,6 @@ public class TrialManagerDMS : MonoBehaviour
 
             // — TRIALON —
             LogEvent("TrialOn");
-            yield return StartCoroutine(WaitInterruptable(TrialOnDuration));
             // — SAMPLEON —
             LogEventNextFrame("SampleOn");
             //   the next 7 lines are because of the IsStimulus checkmark.
@@ -200,6 +199,11 @@ public class TrialManagerDMS : MonoBehaviour
             if (ShowFeedbackUI) FeedbackText.canvasRenderer.SetAlpha(1f);
             yield return StartCoroutine(WaitInterruptable(FeedbackDuration));
 
+             // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
+
             // end global trial timer
             float t1 = Time.realtimeSinceStartup;
 
@@ -281,12 +285,10 @@ public class TrialManagerDMS : MonoBehaviour
     public bool PauseBetweenBlocks = true;
 
     [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 10f;
+    public float MaxChoiceResponseTime = 3f;
     public float FeedbackDuration = 1f;
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;
-
-    public float TrialOnDuration = 2f;
     public float SampleOnDuration = 0.5f;
     public float SampleOffDuration = 0.5f;
     public float DistractorOnDuration = 0.5f;

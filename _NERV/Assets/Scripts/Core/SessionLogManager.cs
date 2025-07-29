@@ -103,7 +103,7 @@ public class SessionLogManager : MonoBehaviour
         _screenshotCamera = Camera.main
             ?? GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
         if (_screenshotCamera == null)
-            Debug.LogWarning("[SessionLogManager] No MainCamera found for screenshots!");
+           
 
 
         if (transform.parent != null) transform.SetParent(null);

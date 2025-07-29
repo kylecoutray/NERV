@@ -735,7 +735,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("    {");
         sb.AppendLine("        int total = _trialResults.Count;");
         sb.AppendLine("        int corrects = _trialResults.Count(r => r.isCorrect);");
-        sb.AppendLine("        float meanRt = _trialResults.Average(r => r.ReactionTimeMs);");
+        sb.AppendLine("        float meanRt = _trialResults.Any() ? _trialResults.Average(r => r.ReactionTimeMs) : 0f;");
         sb.AppendLine();
         sb.AppendLine("        return new SessionLogManager.TaskSummary");
         sb.AppendLine("        {");

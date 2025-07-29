@@ -601,7 +601,7 @@ public class TrialManagerMNM : MonoBehaviour
     {
         int total = _trialResults.Count;
         int corrects = _trialResults.Count(r => r.isCorrect);
-        float meanRt = _trialResults.Average(r => r.ReactionTimeMs);
+        float meanRt = _trialResults.Any() ? _trialResults.Average(r => r.ReactionTimeMs) : 0f;
 
         return new SessionLogManager.TaskSummary
         {

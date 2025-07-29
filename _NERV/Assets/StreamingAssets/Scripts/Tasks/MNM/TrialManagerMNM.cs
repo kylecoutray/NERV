@@ -74,9 +74,6 @@ public class TrialManagerMNM : MonoBehaviour
             int[] lastIdxs = new int[0];
 
             LogEvent("TrialOn");
-            // — IDLE —
-            LogEvent("Idle");
-            yield return StartCoroutine(WaitInterruptable(IdleDuration));
 
 
             // — FIXATION —
@@ -171,6 +168,7 @@ public class TrialManagerMNM : MonoBehaviour
             // 3) Wait for click or timeout  
             bool answered = false;
             int pickedIdx = -1;
+            
             float reactionT = 0f;
 
             yield return StartCoroutine(WaitForChoice((i, rt) =>
@@ -214,8 +212,11 @@ public class TrialManagerMNM : MonoBehaviour
             // 8) Coin feedback (optional)  
             if (answered && UseCoinFeedback)
             {
-                var clickPos = Input.mousePosition;
-                if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickPos);
+                Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastScreenPos     // gaze-dwell position
+                    : Input.mousePosition;         // regular mouse
+
+                if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);
                 else CoinController.Instance.RemoveCoins(1);
             }
 
@@ -230,8 +231,14 @@ public class TrialManagerMNM : MonoBehaviour
             foreach (var go in choiceItems)
                 Destroy(go);
 
+
             // end global trial timer
             float t1 = Time.realtimeSinceStartup;
+
+            // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
 
             //Block Handling
             thisBlock = trial.BlockCount;
@@ -300,12 +307,10 @@ public class TrialManagerMNM : MonoBehaviour
     public bool PauseBetweenBlocks = true;
 
     [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 10f;
+    public float MaxChoiceResponseTime = 2.75f;
     public float FeedbackDuration = 1f;
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;
-
-    public float IdleDuration = 2f;
     public float FixationDuration = 1f;
     public float CueOnDuration = 0.5f;
     public float Delay1Duration = 0.25f;
@@ -660,7 +665,6 @@ public class TrialManagerMNM : MonoBehaviour
 
 public enum TrialStateMNM
 {
-    Idle,
     Fixation,
     CueOn,
     CueOff,

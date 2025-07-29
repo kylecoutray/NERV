@@ -50,6 +50,7 @@ public class SessionLogManager : MonoBehaviour
     public bool enableScreenshots = true;
     [Range(10, 100), Tooltip("JPEG quality (10–100)")]
     public int jpgQuality = 50;
+    private Camera _screenshotCamera;
 
     // pooled buffers
     private RenderTexture _screenshotRT;
@@ -97,6 +98,13 @@ public class SessionLogManager : MonoBehaviour
 
 
         Instance = this;
+
+        // fetch the MainCamera by (or Camera.main)
+        _screenshotCamera = Camera.main
+            ?? GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
+        if (_screenshotCamera == null)
+            Debug.LogWarning("[SessionLogManager] No MainCamera found for screenshots!");
+
 
         if (transform.parent != null) transform.SetParent(null);
         DontDestroyOnLoad(gameObject);
@@ -159,10 +167,16 @@ public class SessionLogManager : MonoBehaviour
 
         if (enableScreenshots)
         {
-            _screenshotRT = new RenderTexture(screenshotWidth, screenshotHeight, 0, RenderTextureFormat.ARGB32);
+            _screenshotRT = new RenderTexture(screenshotWidth, screenshotHeight, 24, RenderTextureFormat.ARGB32);
             _screenshotRT.Create();
             // match the 4-channel RT
             _screenshotTex = new Texture2D(screenshotWidth, screenshotHeight, TextureFormat.RGBA32, false);
+            // fetch the MainCamera by (or Camera.main)
+            _screenshotCamera = Camera.main
+                ?? GameObject.FindGameObjectWithTag("MainCamera")?.GetComponent<Camera>();
+            if (_screenshotCamera == null)
+                Debug.LogWarning("[SessionLogManager] No MainCamera found for screenshots!");
+
         }
 
         // 1) HEADER file
@@ -404,40 +418,35 @@ public class SessionLogManager : MonoBehaviour
     }
     private IEnumerator CaptureStateScreenshotCoroutine(string stateName)
     {
-        // wait until end of frame so the backbuffer is fully rendered
+        // let the frame finish (plus any extra delay)
         yield return new WaitForEndOfFrame();
-
-        // optional extra delays if your spawns happen one frame later
         for (int i = 1; i < screenshotFrameDelay; i++)
             yield return new WaitForEndOfFrame();
 
-        // capture & downscale in one GPU pass
-        ScreenCapture.CaptureScreenshotIntoRenderTexture(_screenshotRT);
+        // 1) Render our camera into the RT
+        var oldRT = _screenshotCamera.targetTexture;
+        _screenshotCamera.targetTexture = _screenshotRT;
+        _screenshotCamera.Render();
 
-        // allow one more frame for the GPU to finish the blit
-        yield return new WaitForEndOfFrame();
+        // 2) Copy pixels back into the Texture2D
+        RenderTexture.active = _screenshotRT;
+        _screenshotTex.ReadPixels(new Rect(0, 0, screenshotWidth, screenshotHeight), 0, 0);
+        _screenshotTex.Apply();
 
-        // now async readback as before
-        AsyncGPUReadback.Request(_screenshotRT, 0, request =>
-        {
-            if (request.hasError)
-            {
-                Debug.LogWarning($"[Screenshot] GPU readback error for {stateName}");
-                return;
-            }
+        // 3) Restore
+        RenderTexture.active = null;
+        _screenshotCamera.targetTexture = oldRT;
 
-            _screenshotTex.LoadRawTextureData(request.GetData<byte>());
-            _screenshotTex.Apply(false, false);
-            FlipVertical(_screenshotTex);
 
-            byte[] jpg = _screenshotTex.EncodeToJPG(jpgQuality);
-            string folder = Path.Combine(taskFolder, "StatesCaptured");
-            Directory.CreateDirectory(folder);
-            string fileName = $"{DateTime.Now:HHmmss}_{stateName}.jpg";
-            string fullPath = Path.Combine(folder, fileName);
-            Task.Run(() => File.WriteAllBytes(fullPath, jpg));
-            Debug.Log($"<color=yellow>[Screenshot]</color> {stateName} → {fullPath}");
-        });
+        // 4) Encode & save on worker thread
+        byte[] jpg = _screenshotTex.EncodeToJPG(jpgQuality);
+        string folder   = Path.Combine(taskFolder, "StatesCaptured");
+        Directory.CreateDirectory(folder);
+        string fileName = $"{DateTime.Now:HHmmss}_{stateName}.jpg";
+        string fullPath = Path.Combine(folder, fileName);
+        Task.Run(() => File.WriteAllBytes(fullPath, jpg));
+
+        Debug.Log($"<color=yellow>[Screenshot]</color> {stateName} → {fullPath}");
     }
 
     void FlipVertical(Texture2D tex)

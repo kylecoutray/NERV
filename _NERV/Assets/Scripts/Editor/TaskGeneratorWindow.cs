@@ -363,10 +363,6 @@ public class TaskGeneratorWindow : EditorWindow
         }
 
         // Normal increment if not Reset
-        sb.AppendLine("            // Standardize Trial Timing");
-        sb.AppendLine("            LogEvent(\"InterTrialInterval\");");
-        sb.AppendLine("            Debug.Log($" +"[TrialManager{acr}] InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s);");
-        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));");
 
         sb.AppendLine("            // End global trial timer");
         sb.AppendLine("            float t1 = Time.realtimeSinceStartup;");
@@ -374,6 +370,10 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("            // Normal Increment / Trial Handling events");
         sb.AppendLine("            if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);");
         sb.AppendLine();
+        sb.AppendLine("            // Standardize Trial Timing");
+        sb.AppendLine("            LogEvent(\"InterTrialInterval\");");
+        sb.AppendLine("            Debug.Log($" +"[TrialManager{acr}] InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s);");
+        sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));");
         sb.AppendLine();
         sb.AppendLine("            //Block Handling");
         sb.AppendLine("            thisBlock = trial.BlockCount;");

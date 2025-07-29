@@ -264,7 +264,12 @@ public class TrialManagerRSM : MonoBehaviour
                 else { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
-            Vector2 clickScreenPos = Input.mousePosition;
+
+            Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
+                ? DwellClick.LastScreenPos     // gaze-dwell position
+                : Input.mousePosition;         // regular mouse
+
+            
             if (pickedIdx >= 0 && UseCoinFeedback)
             {
                 if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);
@@ -286,12 +291,17 @@ public class TrialManagerRSM : MonoBehaviour
 
             yield return null;
 
+
             // End global trial timer
             float t1 = Time.realtimeSinceStartup;
 
             // Normal Increment / Trial Handling events
             if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);
 
+            // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
 
             //Block Handling
             thisBlock = trial.BlockCount;

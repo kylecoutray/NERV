@@ -232,13 +232,13 @@ public class TrialManagerMNM : MonoBehaviour
                 Destroy(go);
 
 
+            // end global trial timer
+            float t1 = Time.realtimeSinceStartup;
+
             // Standardize Trial Timing
             LogEvent("InterTrialInterval");
             Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
             yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
-
-            // end global trial timer
-            float t1 = Time.realtimeSinceStartup;
 
             //Block Handling
             thisBlock = trial.BlockCount;

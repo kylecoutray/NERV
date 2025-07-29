@@ -227,10 +227,6 @@ public class TrialManagerSDMS : MonoBehaviour
 
             yield return null;
 
-            // Standardize Trial Timing
-            LogEvent("InterTrialInterval");
-            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
-            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
             
             // End global trial timer
             float t1 = Time.realtimeSinceStartup;
@@ -238,7 +234,11 @@ public class TrialManagerSDMS : MonoBehaviour
             // Normal Increment / Trial Handling events
             if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);
 
-
+            // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
+            
             //Block Handling
             thisBlock = trial.BlockCount;
             int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;

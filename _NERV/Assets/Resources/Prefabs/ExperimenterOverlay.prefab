@@ -1187,11 +1187,11 @@ Transform:
   m_GameObject: {fileID: 2487338266274885282}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.83912, y: -3.033, z: 3.956}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -21697.2}
+  m_LocalScale: {x: 108, y: 108, z: 108}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2487338266523494262}
+  m_Father: {fileID: 2487338266863463620}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &2487338266274885281
 Camera:
@@ -1327,7 +1327,6 @@ Transform:
   - {fileID: 2487338266863463620}
   - {fileID: 2487338266711957628}
   - {fileID: 2487338267132381769}
-  - {fileID: 2487338266274885294}
   - {fileID: 2487338267020239847}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1455,6 +1454,7 @@ RectTransform:
   - {fileID: 6304662735865655281}
   - {fileID: 1469586046555481167}
   - {fileID: 5674463996739161320}
+  - {fileID: 2487338266274885294}
   m_Father: {fileID: 2487338266523494262}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -4624,7 +4624,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3492781400362746727}
   m_HandleRect: {fileID: 5350303066029012962}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -5279,7 +5279,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 5075922471018964306}
   m_Direction: 0
   m_Value: 1
-  m_Size: 0.99999994
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

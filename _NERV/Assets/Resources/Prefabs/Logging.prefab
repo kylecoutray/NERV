@@ -47,12 +47,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   portName: COM3
   baudRate: 115200
-  testMode: 0
+  testMode: 1
   trialsToCapture: 1
   screenshotFrameDelay: 3
   screenshotWidth: 256
   screenshotHeight: 144
-  enableScreenshots: 1
+  enableScreenshots: 0
   jpgQuality: 50
 --- !u!114 &614927039810980231
 MonoBehaviour:

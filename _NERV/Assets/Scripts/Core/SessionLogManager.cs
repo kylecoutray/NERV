@@ -5,7 +5,9 @@ using System;
 using System.Security.Cryptography;
 using System.Reflection;
 using System.Linq;
+#if !UNITY_WEBGL
 using System.IO.Ports;
+#endif
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -32,7 +34,9 @@ public class SessionLogManager : MonoBehaviour
     public string portName = "COM3";
     public int baudRate = 115200;
     public bool testMode = false;
+    #if !UNITY_WEBGL
     private SerialPort serialPort;
+    #endif
 
     [Header("Screenshot Settings")]
     [Tooltip("How many trials’ first‐pass of each state to capture")]
@@ -71,6 +75,7 @@ public class SessionLogManager : MonoBehaviour
     private string _currentTaskAcronym = null;
 
 
+    #if !UNITY_WEBGL
     public void InitializeSerialPort()
     {
         if (!testMode)
@@ -83,6 +88,7 @@ public class SessionLogManager : MonoBehaviour
             }
         }
     }
+    #endif
 
     void Awake()
     {
@@ -326,8 +332,10 @@ public class SessionLogManager : MonoBehaviour
         float unityTime = UnityEngine.Time.realtimeSinceStartup;
         double stopwatchTime = sw.Elapsed.TotalSeconds;
 
-        string status, byteSent = "NoByte";
 
+        #if !UNITY_WEBGL
+        string status, byteSent = "NoByte";
+        
         if (ttlCode >= 1 && ttlCode <= 8)
         {
             byte val = (evt == "StartEndBlock") ? (byte)255 : (byte)(1 << (ttlCode - 1));
@@ -354,6 +362,7 @@ public class SessionLogManager : MonoBehaviour
             status = "LOG_ONLY";
         }
 
+        #endif
         // write TTL CSV: Frame, UnityTime, StopwatchTime, TrialID, Event, Code
         ttlWriter.WriteLine(
             $"{frame},{unityTime:F4},{stopwatchTime:F6}," +
@@ -361,6 +370,7 @@ public class SessionLogManager : MonoBehaviour
         );
         ttlWriter.Flush();
 
+        #if !UNITY_WEBGL
         // console feedback
         string line = $"<b>[TTL]</b> Event: {evt}, Code: {ttlCode}, Byte: {byteSent},Unity Time: {unityTime:F4}s, Stopwatch Time: {stopwatchTime:F6}s, Frame: {frame}, " +
             $"{status}";
@@ -368,6 +378,7 @@ public class SessionLogManager : MonoBehaviour
         if (status == "FAILED") Debug.LogWarning($"FAILED TTL!");
         else Debug.Log($"{line}");
 
+        #endif
         // bump the seen‐count for this state
         int seen = 0;
         _stateCaptureCounts.TryGetValue(evt, out seen);
@@ -384,13 +395,17 @@ public class SessionLogManager : MonoBehaviour
     {
         allWriter?.Close();
         ttlWriter?.Close();
+        #if !UNITY_WEBGL
         if (serialPort != null && serialPort.IsOpen)
             serialPort.Close();
+        #endif
     }
 
     /// <summary>
     /// Immediately write one raw byte out the COM port. Used for testing the connection.
     /// </summary>
+    /// 
+    #if !UNITY_WEBGL
     public void SendRawByte(byte b)
     {
         if (testMode)
@@ -416,6 +431,8 @@ public class SessionLogManager : MonoBehaviour
             Debug.LogWarning($"[SerialTTL] Raw send failed: port not open");
         }
     }
+    
+    #endif
     private IEnumerator CaptureStateScreenshotCoroutine(string stateName)
     {
         // let the frame finish (plus any extra delay)
@@ -440,7 +457,7 @@ public class SessionLogManager : MonoBehaviour
 
         // 4) Encode & save on worker thread
         byte[] jpg = _screenshotTex.EncodeToJPG(jpgQuality);
-        string folder   = Path.Combine(taskFolder, "StatesCaptured");
+        string folder = Path.Combine(taskFolder, "StatesCaptured");
         Directory.CreateDirectory(folder);
         string fileName = $"{DateTime.Now:HHmmss}_{stateName}.jpg";
         string fullPath = Path.Combine(folder, fileName);

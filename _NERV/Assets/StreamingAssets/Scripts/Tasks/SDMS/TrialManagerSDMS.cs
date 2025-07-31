@@ -238,7 +238,7 @@ public class TrialManagerSDMS : MonoBehaviour
             LogEvent("InterTrialInterval");
             Debug.Log($"InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
             yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
-            
+
             //Block Handling
             thisBlock = trial.BlockCount;
             int nextBlock = (_currentIndex + 1 < _trials.Count) ? _trials[_currentIndex + 1].BlockCount : -1;
@@ -602,7 +602,7 @@ public class TrialManagerSDMS : MonoBehaviour
     {
         int total = _trialResults.Count;
         int corrects = _trialResults.Count(r => r.isCorrect);
-        float meanRt = _trialResults.Average(r => r.ReactionTimeMs);
+        float meanRt = _trialResults.Any() ? _trialResults.Average(r => r.ReactionTimeMs) : 0f;
 
         return new SessionLogManager.TaskSummary
         {

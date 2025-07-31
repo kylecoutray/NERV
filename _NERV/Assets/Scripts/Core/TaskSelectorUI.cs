@@ -118,12 +118,14 @@ public class TaskSelectorUI : MonoBehaviour
 
     void Update()
     {
+        #if !UNITY_WEBGL
         // if user presses the '`' key...
         if (Input.GetKeyDown(KeyCode.BackQuote))
         {
             // start testing‐pulse coroutine. testing the communication.
             StartCoroutine(SendTestingPulses());
         }
+        #endif
     }
 
     public void OnStartSessionClicked()
@@ -131,8 +133,10 @@ public class TaskSelectorUI : MonoBehaviour
 
         SessionManager.Instance.Initialize(SessionNameInput.text);
 
+#if !UNITY_WEBGL
         // start logging
         SessionLogManager.Instance.InitializeSerialPort();
+#endif
 
         // lock down two COM controls
         SettingsUI.portInput.interactable = false;
@@ -154,8 +158,11 @@ public class TaskSelectorUI : MonoBehaviour
         // enable the grid
         TasksPanel.SetActive(true);
 
+#if !UNITY_WEBGL
+
         // send testing TTL pulses if not test mode, debug only if so.
         StartCoroutine(SendTestingPulses());
+        #endif
 
     }
     public void ControlsUISetup()
@@ -216,15 +223,22 @@ public class TaskSelectorUI : MonoBehaviour
     }
     public void OnExitButtonClicked()
     {
-#if UNITY_EDITOR
-        // Stop play-mode in the Editor
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        // Quit the standalone build
-        Application.Quit();
-#endif
+        #if UNITY_EDITOR
+            // Stop play-mode in the Editor
+            UnityEditor.EditorApplication.isPlaying = false;
+        #elif UNITY_WEBGL
+            // Exit fullscreen in WebGL
+            Screen.fullScreen = false;
 
+            // (Optional) Try to close the browser tab/window.
+            // Note: Most browsers will block window.close() unless opened via script.
+            Application.ExternalEval("window.close();");
+        #else
+            // Quit the standalone build
+            Application.Quit();
+        #endif
     }
+
     public void OnTaskIconClicked(string sceneName)
     {
         if (string.IsNullOrEmpty(SessionManager.Instance.SessionName))
@@ -279,6 +293,7 @@ public class TaskSelectorUI : MonoBehaviour
 
     }
 
+#if !UNITY_WEBGL
     private IEnumerator SendTestingPulses()
     {
         if (!SessionLogManager.Instance.testMode)
@@ -296,6 +311,7 @@ public class TaskSelectorUI : MonoBehaviour
 
         else
             Debug.Log("<color=yellow><b> TTL Test Mode ON:</b> Skipping real pulses—simulation only.</color>");
-            // When simulating only (TEST MODE ON)
+        // When simulating only (TEST MODE ON)
     }
+    #endif
 }

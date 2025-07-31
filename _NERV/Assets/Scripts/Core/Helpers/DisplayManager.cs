@@ -75,7 +75,7 @@ public class DisplayManager : MonoBehaviour
     if (_monkeyOverlay   != null) _monkeyOverlay.SetActive(false);
     
     // Only kill the experimenter UI when entering TaskSelector (or SingleHuman mode)
-    if (scene.name == "TaskSelector" || CurrentMode == Mode.SingleHuman)
+    if (scene.name == "TaskSelector" || CurrentMode == Mode.SingleHuman || Application.platform == RuntimePlatform.WebGLPlayer)
       if (_experimenterUI != null) _experimenterUI.SetActive(false);
 
     // grab the PauseButton once by name
@@ -111,7 +111,7 @@ public class DisplayManager : MonoBehaviour
 
     // Enable display 2 only in dual modes
     if ((CurrentMode == Mode.DualHuman || CurrentMode == Mode.DualMonkey)
-        && Display.displays.Length > 1)
+        && Display.displays.Length > 1 && Application.platform != RuntimePlatform.WebGLPlayer)
     {
       Display.displays[1].Activate();
     }
@@ -152,6 +152,7 @@ public class DisplayManager : MonoBehaviour
       if (mc != null) mc.targetDisplay = 0;
     }
 
+#if !UNITY_WEBGL
     // 3) Experimenter UI on Display 2 in non-TaskSelector scenes
     if ((CurrentMode == Mode.DualHuman || CurrentMode == Mode.DualMonkey)
         && sceneName != "TaskSelector"
@@ -184,6 +185,7 @@ public class DisplayManager : MonoBehaviour
         _experimenterUI.SetActive(true);
       }
     }
+    #endif
   }
   // detects the PauseCanvas by name; tweak to use a tag or inspector reference
 

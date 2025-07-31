@@ -39,6 +39,9 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
+        // 1) Force 1920×1080 fullscreen with letterboxing
+        Screen.SetResolution(1920, 1080, FullScreenMode.FullScreenWindow);
+
         // Convert the new RefreshRate struct to a float Hz value
         var rr = Screen.currentResolution.refreshRateRatio;
         frameRate = Mathf.RoundToInt(rr.numerator / (float)rr.denominator);

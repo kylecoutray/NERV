@@ -1415,7 +1415,7 @@ MonoBehaviour:
   screenshotFrameDelay: 3
   screenshotWidth: 256
   screenshotHeight: 144
-  enableScreenshots: 0
+  enableScreenshots: 1
   jpgQuality: 50
 --- !u!114 &1512313122360768747
 MonoBehaviour:

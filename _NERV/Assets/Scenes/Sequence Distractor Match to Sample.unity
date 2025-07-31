@@ -1415,7 +1415,7 @@ MonoBehaviour:
   screenshotFrameDelay: 3
   screenshotWidth: 256
   screenshotHeight: 144
-  enableScreenshots: 1
+  enableScreenshots: 0
   jpgQuality: 50
 --- !u!114 &1512313122360768747
 MonoBehaviour:
@@ -2887,7 +2887,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 47}
   m_SizeDelta: {x: 600, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5211587736205066366

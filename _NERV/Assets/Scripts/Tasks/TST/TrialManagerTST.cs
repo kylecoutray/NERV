@@ -132,7 +132,7 @@ public class TrialManagerTST : MonoBehaviour
                 _score += PointsPerCorrect;
                 if (!CoinController.Instance.CoinBarWasJustFilled)
                     _audioSrc.PlayOneShot(_correctBeep);
-                LogEvent("AudioPlaying: _correctBeep");
+                LogEvent("AudioPlaying_correctBeep");
                 LogEvent("Success");
                 FeedbackText.text = $"+{PointsPerCorrect}";
             }
@@ -141,12 +141,14 @@ public class TrialManagerTST : MonoBehaviour
                 _score += PointsPerWrong;
                 UpdateScoreUI();
                 _audioSrc.PlayOneShot(_errorBeep);
-                LogEvent("AudioPlaying: _errorBeep");
+                LogEvent("AudioPlaying_errorBeep");
                 if (answered) { LogEvent("TargetSelected"); LogEvent("Fail"); }
                 else          { LogEvent("Timeout"); LogEvent("Fail"); }
                 FeedbackText.text = answered ? "Wrong!" : "Too Slow!";
             }
-            Vector2 clickScreenPos = Input.mousePosition;
+            Vector2 clickScreenPos = DwellClick.ClickDownThisFrame
+                ? DwellClick.LastScreenPos     // gaze-dwell position
+                : Input.mousePosition;         // regular mouse
             if (pickedIdx >= 0 && UseCoinFeedback)
             {
                 if (correct) CoinController.Instance.AddCoinsAtScreen(CoinsPerCorrect, clickScreenPos);
@@ -167,6 +169,10 @@ public class TrialManagerTST : MonoBehaviour
             // Normal Increment / Trial Handling events
             if (ShowFeedbackUI) FeedbackText.CrossFadeAlpha(0f, 0.3f, false);
 
+            // Standardize Trial Timing
+            LogEvent("InterTrialInterval");
+            Debug.Log($"[TrialManager{_taskAcronym}] InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s");
+            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));
 
             //Block Handling
             thisBlock = trial.BlockCount;
@@ -234,7 +240,7 @@ public class TrialManagerTST : MonoBehaviour
     public bool PauseBetweenBlocks = true;
 
     [Header("Timing & Scoring")]
-    public float MaxChoiceResponseTime = 10f;
+    public float MaxChoiceResponseTime = 3f;
     public float FeedbackDuration = 1f;
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;
@@ -380,7 +386,9 @@ public class TrialManagerTST : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || DwellClick.ClickDownThisFrame)
             {
-                var ray = PlayerCamera.ScreenPointToRay(Input.mousePosition);
+                Ray ray = DwellClick.ClickDownThisFrame
+                    ? DwellClick.LastRay // If using DwellClick, use its last ray
+                    : PlayerCamera.ScreenPointToRay(Input.mousePosition); // Otherwise we are using the mouse position
                 if (Physics.Raycast(ray, out var hit))
                 {
                     var stimID = hit.collider.GetComponent<StimulusID>();
@@ -500,7 +508,7 @@ public class TrialManagerTST : MonoBehaviour
     {
         int total = _trialResults.Count;
         int corrects = _trialResults.Count(r => r.isCorrect);
-        float meanRt = _trialResults.Average(r => r.ReactionTimeMs);
+        float meanRt = _trialResults.Any() ? _trialResults.Average(r => r.ReactionTimeMs) : 0f;
 
         return new SessionLogManager.TaskSummary
         {

@@ -351,6 +351,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Dependencies
       objectReference: {fileID: 0}
+    - target: {fileID: 393012202830190141, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: instructionSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 62ea4c884dd264c6e9a61449c390cccf, type: 3}
     - target: {fileID: 4690493371694339712, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: m_RootOrder
       value: 0

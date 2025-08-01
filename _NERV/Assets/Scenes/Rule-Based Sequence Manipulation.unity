@@ -254,7 +254,7 @@ MonoBehaviour:
   UseCoinFeedback: 1
   CoinsPerCorrect: 2
   PauseBetweenBlocks: 1
-  MaxChoiceResponseTime: 3
+  MaxChoiceResponseTime: 4.5
   FeedbackDuration: 1
   PointsPerCorrect: 2
   PointsPerWrong: -1
@@ -345,7 +345,19 @@ PrefabInstance:
       propertyPath: m_Name
       value: Dependencies
       objectReference: {fileID: 0}
+    - target: {fileID: 393012202830190141, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: instructionSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 89b7c988ee0d74e6ea54ccf3162f3df5, type: 3}
+    - target: {fileID: 1150005731122224327, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 93.6
+      objectReference: {fileID: 0}
     - target: {fileID: 1278661331159371955, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3868870936311180709, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
@@ -516,6 +528,22 @@ PrefabInstance:
     - target: {fileID: 5211587737649602731, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5589027644753596491, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7091783436929525700, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.85
+      objectReference: {fileID: 0}
+    - target: {fileID: 7091783436929525700, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.85
+      objectReference: {fileID: 0}
+    - target: {fileID: 7091783436929525700, guid: be657328d3d53400c803a38d106b9d45, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 140.1
       objectReference: {fileID: 0}
     - target: {fileID: 7476013745092199760, guid: be657328d3d53400c803a38d106b9d45, type: 3}
       propertyPath: m_PresetInfoIsWorld

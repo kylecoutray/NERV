@@ -372,7 +372,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine();
         sb.AppendLine("            // Standardize Trial Timing");
         sb.AppendLine("            LogEvent(\"InterTrialInterval\");");
-        sb.AppendLine("            Debug.Log($" +"[TrialManager{acr}] InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s);");
+        sb.AppendLine("            Debug.Log($\"[TrialManager{_taskAcronym}] InterTrialInterval Delay: MaxChoiceResponseTime ({MaxChoiceResponseTime}) - ReactionTime ({reactionT}): {MaxChoiceResponseTime - reactionT}s\");");
         sb.AppendLine("            yield return StartCoroutine(WaitInterruptable(MaxChoiceResponseTime - reactionT));");
         sb.AppendLine();
         sb.AppendLine("            //Block Handling");

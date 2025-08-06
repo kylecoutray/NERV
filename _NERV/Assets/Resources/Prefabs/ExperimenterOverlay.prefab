@@ -4290,7 +4290,7 @@ MonoBehaviour:
   inputField: {fileID: 5662347242920044741}
   sendButton: {fileID: 4778807092834785210}
   commentsScrollRect: {fileID: 0}
-  commentsContent: {fileID: 0}
+  commentsContent: {fileID: 7229602064640037026}
   commentBoxPrefab: {fileID: 5305048231832867669, guid: 614bf1d6afd8d4a4590cf96c99421d1d, type: 3}
 --- !u!1 &6429439533414985417
 GameObject:

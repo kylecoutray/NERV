@@ -9,10 +9,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4552122083649509051}
+  - component: {fileID: 3867893271703428161}
   - component: {fileID: 8529000752777378243}
   - component: {fileID: 2464225258408780578}
   - component: {fileID: 1730598268650158230}
-  - component: {fileID: 3867893271703428161}
   m_Layer: 5
   m_Name: HOWTOPLAY
   m_TagString: Untagged
@@ -40,6 +40,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 82.19998}
   m_SizeDelta: {x: 262, y: 49.400024}
   m_Pivot: {x: 0.5, y: 0}
+--- !u!114 &3867893271703428161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389908171340048345}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61831199ca06645e2ac601605d141b3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  instructionPanel: {fileID: 9028012957282834999}
+  instructionImage: {fileID: 404277663985341228}
+  buttonText: {fileID: 2067226680898975273}
+  instructionSprite: {fileID: 21300000, guid: e51c320bba8244906bf9703443f0fe28, type: 3}
 --- !u!222 &8529000752777378243
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -134,22 +150,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &3867893271703428161
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 389908171340048345}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61831199ca06645e2ac601605d141b3d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  instructionPanel: {fileID: 9028012957282834999}
-  instructionImage: {fileID: 404277663985341228}
-  buttonText: {fileID: 2067226680898975273}
-  instructionSprite: {fileID: 21300000, guid: 83362f3e85a774bad8fe5414add2a939, type: 3}
 --- !u!1 &516212596482026757
 GameObject:
   m_ObjectHideFlags: 0
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3ea13bca933834b88800c2c305e69a22, type: 3}
+  m_Sprite: {fileID: 21300000, guid: e51c320bba8244906bf9703443f0fe28, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1496,7 +1496,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5959060013052407224}
   - component: {fileID: 6579071885073780857}
-  - component: {fileID: 7048097735340948192}
   m_Layer: 5
   m_Name: InstructionPanel
   m_TagString: Untagged
@@ -1532,33 +1531,3 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9028012957282834999}
   m_CullTransparentMesh: 1
---- !u!114 &7048097735340948192
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9028012957282834999}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 3ea13bca933834b88800c2c305e69a22, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1

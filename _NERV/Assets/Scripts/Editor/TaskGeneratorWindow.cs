@@ -241,7 +241,7 @@ public class TaskGeneratorWindow : EditorWindow
         sb.AppendLine("            var trial = _trials[_currentIndex];");
         sb.AppendLine("            var spawnedItems = new List<GameObject>();");
         sb.AppendLine("            int[] lastIdxs = new int[0];");
-        sb.AppendLine("            int[] cueIdxs = new int[0]; // Used for \"correct\" logic");
+        sb.AppendLine("            int[] sampleIdxs = new int[0]; // Used for \"correct\" logic");
         sb.AppendLine("            /// ==========[END SETUP]==========");
         sb.AppendLine();
         sb.AppendLine("            /// === [BEGIN USER-DEFINED STATES LOGIC] ===");
@@ -262,7 +262,10 @@ public class TaskGeneratorWindow : EditorWindow
             if (st.IsStimulus)
             {
                 sb.AppendLine($"            var idxs{stimCount} = trial.GetStimIndices(\"{st.Name}\");");
-                sb.AppendLine($"            cueIdxs = idxs{stimCount}; // Store for correct logic");
+                
+                if (st.IsSample)
+                    sb.AppendLine($"            sampleIdxs = idxs{stimCount}; // Store for correct logic");
+
                 sb.AppendLine($"            var locs{stimCount} = trial.GetStimLocations(\"{st.Name}\");");
                 sb.AppendLine($"            if (idxs{stimCount}.Length > 0 && locs{stimCount}.Length > 0)");
                 sb.AppendLine("            {");
@@ -306,7 +309,7 @@ public class TaskGeneratorWindow : EditorWindow
             {
                 sb.AppendLine();
                 sb.AppendLine("            // — Feedback and Beep —");
-                sb.AppendLine($"            bool correct = answered && cueIdxs.Contains(pickedIdx);");
+                sb.AppendLine($"            bool correct = answered && sampleIdxs.Contains(pickedIdx);");
                 sb.AppendLine("            //Flash Feedback");
                 sb.AppendLine("            if (targetGO != null)");
                 sb.AppendLine("                StartCoroutine(FlashFeedback(targetGO, correct));");

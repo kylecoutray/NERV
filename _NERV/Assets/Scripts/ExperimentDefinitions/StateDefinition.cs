@@ -10,6 +10,7 @@ public class StateDefinition
     public bool IsChoice;
     public bool IsFeedback;
     public bool IsClearAll;
+    public bool IsSample;
     public int TTLCode;
     public float PostStateDelay;
 }

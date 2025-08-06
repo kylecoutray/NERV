@@ -57,23 +57,23 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
 
         if (!headersOnly)
         {
-            // Compute and display trial counts based on stimulus count and cue settings
+            // Compute and display trial counts based on stimulus count and sample settings
             if (experimentDef != null && stimIndexCSV != null)
             {
                 var lines = stimIndexCSV.text
                     .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
                 int stimCount = Math.Max(0, lines.Length - 2);
 
-                // Find cue state config
-                var cueState = experimentDef.States
-                    .FirstOrDefault(s => stateConfigs.ContainsKey(s.Name) && stateConfigs[s.Name].isCue);
+                // Find sample state config
+                var sampleState = experimentDef.States
+                    .FirstOrDefault(s => stateConfigs.ContainsKey(s.Name) && stateConfigs[s.Name].isSample);
 
-                if (cueState != null)
+                if (sampleState != null)
                 {
-                    var cfgCue = stateConfigs[cueState.Name];
+                    var cfgsample = stateConfigs[sampleState.Name];
                     int S = stimCount;
-                    int M = Mathf.Max(1, cfgCue.cueRepetitions);
-                    int N = Mathf.Max(1, cfgCue.expectedStimCount);
+                    int M = Mathf.Max(1, cfgsample.sampleRepetitions);
+                    int N = Mathf.Max(1, cfgsample.expectedStimCount);
 
                     if ((S * M) % N == 0)
                     {
@@ -87,7 +87,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
                     else
                     {
                         EditorGUILayout.HelpBox(
-                            "(StimCount * Cue Repetitions) must be divisible by # Cue Stimuli per Trial for balanced design.",
+                            "(StimCount * sample Repetitions) must be divisible by # sample Stimuli per Trial for balanced design.",
                             MessageType.Error);
                     }
                 }
@@ -115,18 +115,18 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
                     cfg.foldout = EditorGUILayout.Foldout(cfg.foldout, st.Name);
                     if (cfg.foldout)
                     {
-                        cfg.isCue = EditorGUILayout.Toggle("Is Cue (memory) state", cfg.isCue);
-                        if (cfg.isCue)
+                        cfg.isSample = st.IsSample;
+                        if (cfg.isSample)
                         {
-                            cfg.cueRepetitions = Mathf.Max(1,
+                            cfg.sampleRepetitions = Mathf.Max(1,
                                 EditorGUILayout.IntField(
-                                    new GUIContent("Cue Repetitions per Stimulus",
+                                    new GUIContent("Sample Repetitions per Stim",
                                                 "Repeat each stimulus this many times per block."),
-                                    cfg.cueRepetitions));
+                                    cfg.sampleRepetitions));
                             cfg.expectedStimCount = Mathf.Clamp(
                                 EditorGUILayout.IntField(
-                                    new GUIContent("# Cue Stimuli per Trial",
-                                                "Pick this many distinct stimuli each cue trial."),
+                                    new GUIContent("# Sample Stimuli per Trial",
+                                                "Pick this many distinct stimuli each sample trial."),
                                     cfg.expectedStimCount),
                                 1, int.MaxValue);
                         }
@@ -235,18 +235,18 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             .Where(s => s.IsStimulus).ToList();
 
         // Compute trial counts
-        string cueName = stimStates
-            .FirstOrDefault(s => stateConfigs[s.Name].isCue)
+        string sampleName = stimStates
+            .FirstOrDefault(s => stateConfigs[s.Name].isSample)
             ?.Name;
-        var cfgCue = (cueName != null) ? stateConfigs[cueName] : null;
+        var cfgsample = (sampleName != null) ? stateConfigs[sampleName] : null;
         int S = stimMap.Count;
-        int M = (cfgCue != null) ? cfgCue.cueRepetitions : 1;
-        int N = (cfgCue != null) ? cfgCue.expectedStimCount : 1;
+        int M = (cfgsample != null) ? cfgsample.sampleRepetitions : 1;
+        int N = (cfgsample != null) ? cfgsample.expectedStimCount : 1;
         if (N < 1 || ((S * M) % N) != 0)
         {
             EditorUtility.DisplayDialog("Error",
                 "Unbalanced design: (StimCount * Repetitions) must " +
-                "be divisible by # Cue Stimuli per Trial.",
+                "be divisible by # sample Stimuli per Trial.",
                 "OK");
             return;
         }
@@ -269,27 +269,27 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
         {
             var cfg = stateConfigs[st.Name];
             allIndices[st.Name] = BuildStimIndicesSequence(stimMap, cfg, totalTrials);
-            allLocs[st.Name]    = BuildStimLocationsSequence(cfg, totalTrials);
+            allLocs[st.Name] = BuildStimLocationsSequence(cfg, totalTrials, allIndices[st.Name]);
         }
 
-        // Sync last event with cue
-        if (!string.IsNullOrEmpty(cueName))
+        // Sync last event with sample
+        if (!string.IsNullOrEmpty(sampleName))
         {
             string lastName = stimStates.Last().Name;
             for (int t = 0; t < totalTrials; t++)
             {
-                var cueList = allIndices[cueName][t];
+                var sampleList = allIndices[sampleName][t];
                 var list    = allIndices[lastName][t];
-                foreach (int cueIdx in cueList)
+                foreach (int sampleIdx in sampleList)
                 {
-                    if (list.Contains(cueIdx)) list.Remove(cueIdx);
-                    list.Insert(0, cueIdx);
+                    if (list.Contains(sampleIdx)) list.Remove(sampleIdx);
+                    list.Insert(0, sampleIdx);
                 }
                 var cfg = stateConfigs[lastName];
                 int targetCount = cfg.randomStim
                     ? cfg.expectedStimCount
                     : cfg.customIndices.Count;
-                if (cfg.isCue) targetCount = cfg.cueRepetitions;
+                if (cfg.isSample) targetCount = cfg.sampleRepetitions;
                 while (list.Count > targetCount)
                     list.RemoveAt(list.Count - 1);
             }
@@ -398,8 +398,8 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             .Select(_ => new List<int>())
             .ToList());
 
-        // 2) Cue logic: N cues per trial (or custom override)
-        if (cfg.isCue)
+        // 2) sample logic: N samples per trial (or custom override)
+        if (cfg.isSample)
         {
             // 1) Custom‑indices override
             if (cfg.customIndices != null && cfg.customIndices.Count > 0)
@@ -412,7 +412,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             // 2) Build one‑block flat list of each stim × repetitions
             var flat = new List<int>();
             foreach (var idx in stimMap.Values)
-                for (int r = 0; r < cfg.cueRepetitions; r++)
+                for (int r = 0; r < cfg.sampleRepetitions; r++)
                     flat.Add(idx);
 
             // 3) Shuffle it
@@ -449,7 +449,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             return seq;
         }
 
-        // 3) Non‐cue logic (your original code)
+        // 3) Non‐sample logic (your original code)
         bool[] occurs = Enumerable.Repeat(true, total).ToArray();
         if (cfg.percentage < 100)
         {
@@ -500,30 +500,26 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
 
     private List<List<Vector3>> BuildStimLocationsSequence(
         StateConfig cfg,
-        int total)
+        int total,
+        List<List<int>> indexSeq)
     {
         var seq = new List<List<Vector3>>(new List<Vector3>[total]);
-        bool[] occurs = Enumerable.Repeat(true, total).ToArray();
-        if (!cfg.isCue && cfg.percentage < 100)
-        {
-            int countOccur = Mathf.RoundToInt(total * cfg.percentage / 100f);
-            occurs = Enumerable.Repeat(true, countOccur)
-                            .Concat(Enumerable.Repeat(false, total - countOccur))
-                            .OrderBy(x => Guid.NewGuid())
-                            .ToArray();
-        }
+
         for (int i = 0; i < total; i++)
         {
-            if (!occurs[i])
+            // If there are no indices this trial → no locations
+            if (indexSeq[i] == null || indexSeq[i].Count == 0)
             {
                 seq[i] = new List<Vector3>();
                 continue;
             }
 
-            int count = cfg.isCue ? cfg.expectedStimCount * cfg.cueRepetitions : cfg.expectedStimCount;
+            // Number of locations needed matches number of indices
+            int count = indexSeq[i].Count;
+
             if (cfg.randomLocations)
             {
-                // compute bounds
+                // --- random within bounds ---
                 int xMin = Mathf.CeilToInt(cfg.locationMin.x);
                 int xMax = Mathf.FloorToInt(cfg.locationMax.x);
                 int yMin = Mathf.CeilToInt(cfg.locationMin.y);
@@ -546,18 +542,23 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
             }
             else
             {
-                seq[i] = new List<Vector3>(cfg.customLocations);
+                // --- custom locations override ---
+                // If customLocations length matches count, use them directly;
+                // otherwise you might choose to trim or repeat as needed.
+                seq[i] = new List<Vector3>(cfg.customLocations.Take(count));
             }
         }
+
         return seq;
     }
+
 
     [Serializable]
     private class StateConfig
     {
         public bool foldout = true;
-        public bool isCue = false;
-        public int cueRepetitions = 1;
+        public bool isSample = false;
+        public int sampleRepetitions = 1;
         public int percentage = 100;
         public bool randomStim = true;
         public int expectedStimCount = 1;

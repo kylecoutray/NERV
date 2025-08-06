@@ -1481,7 +1481,7 @@ MonoBehaviour:
   screenshotFrameDelay: 3
   screenshotWidth: 256
   screenshotHeight: 144
-  enableScreenshots: 0
+  enableScreenshots: 1
   jpgQuality: 50
 --- !u!114 &1512313122360768747
 MonoBehaviour:
@@ -1837,7 +1837,6 @@ Transform:
   - {fileID: 3875502045301434065}
   - {fileID: 3875502046294587550}
   - {fileID: 1512313122360768662}
-  - {fileID: 7522971085225093040}
   - {fileID: 3473284031665172886}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -3294,54 +3293,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!4 &7522971085225093040
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7522971085225093042}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 427.83472, y: 182.51715, z: -153.31229}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4690493372069267108}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &7522971085225093042
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7522971085225093040}
-  - component: {fileID: 7522971085225093043}
-  m_Layer: 0
-  m_Name: DisplayManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &7522971085225093043
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7522971085225093042}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 29e667da02e9e440ca495864af36e197, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  humanOverlayPrefab: {fileID: 8865381430194405198, guid: a04c7d30199384c37843c708998466f0, type: 3}
-  monkeyOverlayPrefab: {fileID: 1711645529495179289, guid: cfdc9b49bac984098af402ce583d0136, type: 3}
-  experimenterPrefab: {fileID: 2487338266523494281, guid: aaabcd87cab97427695c6af45cc35b47, type: 3}
-  pauseCanvas: {fileID: 0}
 --- !u!114 &7561859353321056173
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -30,6 +30,7 @@ public class TrialDefinitionGeneratorWindow : EditorWindow
 
     private void OnGUI()
     {
+        EditorGUIUtility.labelWidth = 200; 
         GUILayout.Label("Generate Trial Definition CSV", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 

@@ -21,6 +21,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 1
     PostStateDelay: 0
   - Name: CueOn
@@ -30,6 +31,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 1
     TTLCode: 2
     PostStateDelay: 3
   - Name: CueOff
@@ -39,6 +41,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 1
+    IsSample: 0
     TTLCode: 0
     PostStateDelay: 0
   - Name: Walking
@@ -48,6 +51,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 3
     PostStateDelay: 0
   - Name: Context
@@ -57,6 +61,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 4
     PostStateDelay: 0
   - Name: SampleOn
@@ -66,6 +71,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 5
     PostStateDelay: 0
   - Name: Choice
@@ -75,6 +81,7 @@ MonoBehaviour:
     IsChoice: 1
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 6
     PostStateDelay: 0
   - Name: Feedback
@@ -84,6 +91,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 1
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 7
     PostStateDelay: 0
   - Name: Reset
@@ -93,5 +101,6 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 1
+    IsSample: 0
     TTLCode: 0
     PostStateDelay: 0

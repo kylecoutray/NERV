@@ -21,8 +21,9 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 0
-    PostStateDelay: 1
+    PostStateDelay: 10
   - Name: DistractorOn
     IsTTL: 0
     IsStimulus: 1
@@ -30,6 +31,7 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 0
     PostStateDelay: 0
   - Name: Choice
@@ -39,6 +41,7 @@ MonoBehaviour:
     IsChoice: 1
     IsFeedback: 0
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 0
     PostStateDelay: 0
   - Name: Feedback
@@ -48,5 +51,6 @@ MonoBehaviour:
     IsChoice: 0
     IsFeedback: 1
     IsClearAll: 0
+    IsSample: 0
     TTLCode: 0
     PostStateDelay: 0

@@ -67,14 +67,13 @@ public class TrialManagerTST : MonoBehaviour
             var trial = _trials[_currentIndex];
             var spawnedItems = new List<GameObject>();
             int[] lastIdxs = new int[0];
-            int[] cueIdxs = new int[0]; // Used for "correct" logic
+            int[] sampleIdxs = new int[0]; // Used for "correct" logic
             /// ==========[END SETUP]==========
 
             /// === [BEGIN USER-DEFINED STATES LOGIC] ===
             // — SAMPLEON —
             LogEventNextFrame("SampleOn");
             var idxs1 = trial.GetStimIndices("SampleOn");
-            cueIdxs = idxs1; // Store for correct logic
             var locs1 = trial.GetStimLocations("SampleOn");
             if (idxs1.Length > 0 && locs1.Length > 0)
             {
@@ -88,7 +87,6 @@ public class TrialManagerTST : MonoBehaviour
             // — DISTRACTORON —
             LogEventNextFrame("DistractorOn");
             var idxs2 = trial.GetStimIndices("DistractorOn");
-            cueIdxs = idxs2; // Store for correct logic
             var locs2 = trial.GetStimLocations("DistractorOn");
             if (idxs2.Length > 0 && locs2.Length > 0)
             {
@@ -121,7 +119,7 @@ public class TrialManagerTST : MonoBehaviour
             LogEvent("Feedback");
 
             // — Feedback and Beep —
-            bool correct = answered && cueIdxs.Contains(pickedIdx);
+            bool correct = answered && sampleIdxs.Contains(pickedIdx);
             //Flash Feedback
             if (targetGO != null)
                 StartCoroutine(FlashFeedback(targetGO, correct));
@@ -245,7 +243,7 @@ public class TrialManagerTST : MonoBehaviour
     public int PointsPerCorrect = 2;
     public int PointsPerWrong = -1;
 
-    public float SampleOnDuration = 1f;
+    public float SampleOnDuration = 10f;
     public float DistractorOnDuration = 0f;
 
     [Header("Helper Variables")]

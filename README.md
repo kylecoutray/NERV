@@ -1,8 +1,12 @@
 # NERV  
 **Neuro-Experimental Runtime for Vanderbilt [NERV]**  
+This GitHub is in pre-release.
+Paper in progress... more documentation coming soon.
+
 A Unity-Based Framework for Rapid Neuroscience Experiment Design and Execution  
 
 Astronaut Scholarship Foundation Technical Conference Presentation of NERV:
+
 [![Watch here](https://img.youtube.com/vi/UzLb2_vhc9c/maxresdefault.jpg)](https://youtu.be/UzLb2_vhc9c?si=NlPGW5geVD_Sqgtc)
 
 Making a game:

@@ -1,4 +1,4 @@
-# [NERVFRAMEWORK.COM](NERVFRAMEWORK.COM) 
+# [NERVFRAMEWORK.COM](https://nervframework.com)
 **Neuroscience Experimental Runtime by Vanderbilt [NERV]**  
 This GitHub is in pre-release.
 Paper in progress... more documentation coming soon.

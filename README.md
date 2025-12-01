@@ -22,6 +22,7 @@ ___
 
 
 
-**To access test cases for both NHP and Human implementations (exact .exe builds, recorded data, and all logs), please visit the Google Drive [here](https://drive.google.com/drive/folders/1RUQSa4LtDgxQ-1Fj0v-TdEd_E-WJNqKT?usp=sharing)**
-
-
+**Please visit the Google Drive [here](https://drive.google.com/drive/folders/1bfnYk8ob1KO_ltoVwyi9-E69jBNYdmes?usp=sharing) to access:**
+- Test cases for both NHP and Human implementations (exact .exe builds, recorded data, and all logs)
+- The full Arduino firmware that decodes the incoming byte and generates channel-specific TTL pulses
+- Photodiode Timing Test Data and relevant analysis scripts

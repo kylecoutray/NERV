@@ -1,7 +1,8 @@
 # [NERVFRAMEWORK.COM](https://nervframework.com)
 **Neuroscience Experimental Runtime by Vanderbilt [NERV]**  
-_This GitHub is in pre-release._
-_Paper in progress... more documentation coming soon._
+_This GitHub is in development._
+
+Read the paper here: https://pubmed.ncbi.nlm.nih.gov/40964357/
 
 A Unity-Based Framework for Rapid Neuroscience Experiment Design and Execution 
 ___
